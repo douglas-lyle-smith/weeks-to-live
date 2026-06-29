@@ -10,6 +10,8 @@ const stats = {
     remaining: document.querySelector("#weeks-remaining"),
     percent: document.querySelector("#percent-used"),
 };
+const compactQuery = window.matchMedia("(max-width: 700px)");
+let latestData = null;
 
 function formatDate(value) {
     return new Intl.DateTimeFormat(undefined, {
@@ -25,8 +27,13 @@ function eventMap(events) {
     return mapped;
 }
 
-function renderTimeline(data) {
+function setTimelineOrientation(orientation) {
     timeline.innerHTML = "";
+    timeline.className = `timeline ${orientation}`;
+}
+
+function renderHorizontalTimeline(data) {
+    setTimelineOrientation("horizontal");
     const eventsByWeek = eventMap(data.events);
     const ageColumns = data.age_columns || Math.ceil(data.total_weeks / 52);
     const fragment = document.createDocumentFragment();
@@ -84,6 +91,72 @@ function renderTimeline(data) {
     timeline.appendChild(fragment);
 }
 
+function renderVerticalTimeline(data) {
+    setTimelineOrientation("vertical");
+    const eventsByWeek = eventMap(data.events);
+    const ageColumns = data.age_columns || Math.ceil(data.total_weeks / 52);
+    const fragment = document.createDocumentFragment();
+
+    timeline.style.setProperty("--age-count", ageColumns);
+
+    const corner = document.createElement("div");
+    corner.className = "axis-corner";
+    corner.textContent = "Age";
+    fragment.appendChild(corner);
+
+    for (let weekOfYear = 0; weekOfYear < 52; weekOfYear += 1) {
+        const label = document.createElement("div");
+        label.className = "week-label";
+        label.title = `Week ${weekOfYear + 1}`;
+        if (weekOfYear === 0 || weekOfYear === 51 || weekOfYear % 13 === 12) {
+            label.textContent = weekOfYear + 1;
+        }
+        fragment.appendChild(label);
+    }
+
+    for (let age = 0; age < ageColumns; age += 1) {
+        const ageLabel = document.createElement("div");
+        ageLabel.className = "age-label";
+        ageLabel.textContent = age;
+        ageLabel.title = `Age ${age}`;
+        fragment.appendChild(ageLabel);
+
+        for (let weekOfYear = 0; weekOfYear < 52; weekOfYear += 1) {
+            const index = age * 52 + weekOfYear;
+            const week = document.createElement("div");
+
+            if (index >= data.total_weeks) {
+                week.className = "week outside";
+                fragment.appendChild(week);
+                continue;
+            }
+
+            week.className = `week ${index < data.weeks_lived ? "spent" : ""}`;
+            week.title = `Age ${age}, week ${weekOfYear + 1}`;
+
+            const event = eventsByWeek.get(index);
+            if (event) {
+                week.classList.add("event");
+                week.style.setProperty("--event-color", event.color);
+                week.title = `${event.name}, age ${event.age}`;
+            }
+
+            fragment.appendChild(week);
+        }
+    }
+
+    timeline.appendChild(fragment);
+}
+
+function renderTimeline(data) {
+    if (compactQuery.matches) {
+        renderVerticalTimeline(data);
+        return;
+    }
+
+    renderHorizontalTimeline(data);
+}
+
 function renderEvents(events) {
     eventsList.innerHTML = "";
     events.forEach((event) => {
@@ -126,6 +199,7 @@ async function calculate() {
     }
 
     renderStats(data);
+    latestData = data;
     renderTimeline(data);
     renderEvents(data.events);
 }
@@ -139,5 +213,17 @@ form.addEventListener("submit", async (event) => {
         errorBox.style.display = "block";
     }
 });
+
+function rerenderForViewport() {
+    if (latestData) {
+        renderTimeline(latestData);
+    }
+}
+
+if (typeof compactQuery.addEventListener === "function") {
+    compactQuery.addEventListener("change", rerenderForViewport);
+} else {
+    compactQuery.addListener(rerenderForViewport);
+}
 
 calculate();

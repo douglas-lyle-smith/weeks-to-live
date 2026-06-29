@@ -34,3 +34,13 @@ def test_health_endpoint():
 
     assert response.status_code == 200
     assert response.get_json()["status"] == "healthy"
+
+
+def test_index_uses_versioned_static_assets():
+    client = app.test_client()
+    response = client.get("/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "/static/css/style.css?v=" in html
+    assert "/static/js/main.js?v=" in html

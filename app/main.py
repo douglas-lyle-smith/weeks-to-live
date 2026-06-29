@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 from math import ceil
+from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
+STATIC_DIR = Path(__file__).parent / "static"
 
 EVENTS = [
     {
@@ -154,9 +156,17 @@ def calculate_life_stats(
     }
 
 
+def asset_version() -> str:
+    paths = [
+        STATIC_DIR / "css" / "style.css",
+        STATIC_DIR / "js" / "main.js",
+    ]
+    return str(int(max(path.stat().st_mtime for path in paths)))
+
+
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", asset_version=asset_version())
 
 
 @app.route("/api/calculate", methods=["POST"])
