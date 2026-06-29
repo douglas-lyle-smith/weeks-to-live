@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Weeks To Live</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <main class="app-shell">
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark">52</div>
+                <div>
+                    <h1>Weeks To Live</h1>
+                    <p class="tagline">A calendar measured in weeks.</p>
+                </div>
+            </div>
+            <div class="today-pill">Today: <span id="today"></span></div>
+        </header>
+
+        <section class="layout">
+            <aside class="panel">
+                <form class="controls" id="life-form">
+                    <div class="field">
+                        <label for="birthdate">Birthdate</label>
+                        <input id="birthdate" name="birthdate" type="date" value="1980-09-08" required>
+                    </div>
+                    <div class="field">
+                        <label for="life_expectancy">Life Expectancy</label>
+                        <input id="life_expectancy" name="life_expectancy" type="number" min="1" max="130" step="0.1" value="78.6" required>
+                    </div>
+                    <button type="submit">Calculate</button>
+                    <div class="error" id="error"></div>
+                </form>
+
+                <div class="stats">
+                    <div class="stat">
+                        <span>Death Date</span>
+                        <strong id="death-date"></strong>
+                    </div>
+                    <div class="stat">
+                        <span>Current Age</span>
+                        <strong id="age"></strong>
+                    </div>
+                    <div class="stat">
+                        <span>Weeks Lived</span>
+                        <strong id="weeks-lived"></strong>
+                    </div>
+                    <div class="stat">
+                        <span>Weeks Left</span>
+                        <strong id="weeks-remaining"></strong>
+                    </div>
+                    <div class="stat">
+                        <span>Used</span>
+                        <strong id="percent-used"></strong>
+                    </div>
+                </div>
+            </aside>
+
+            <section class="panel visual">
+                <div class="visual-header">
+                    <h2>Life In Weeks</h2>
+                    <div class="legend" aria-label="Legend">
+                        <span class="legend-item"><span class="dot spent"></span> Lived</span>
+                        <span class="legend-item"><span class="dot"></span> Remaining</span>
+                        <span class="legend-item"><span class="dot event"></span> Milestone</span>
+                    </div>
+                </div>
+                <div class="timeline-wrap">
+                    <div class="timeline" id="timeline" aria-label="Life in weeks timeline"></div>
+                </div>
+                <div class="events" id="events"></div>
+            </section>
+        </section>
+    </main>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
+
