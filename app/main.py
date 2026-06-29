@@ -124,6 +124,7 @@ def calculate_life_stats(
     lived_days = max(0, (today - birthdate).days)
     total_days = max(1, (death_date - birthdate).days)
     total_weeks = max(1, ceil(total_days / 7))
+    age_columns = max(1, ceil(total_weeks / 52))
     weeks_lived = min(total_weeks, lived_days // 7)
     weeks_remaining = max(0, total_weeks - weeks_lived)
     age_years = lived_days / DAYS_PER_YEAR
@@ -145,6 +146,7 @@ def calculate_life_stats(
         "death_date": death_date.isoformat(),
         "age_years": round(age_years, 1),
         "total_weeks": total_weeks,
+        "age_columns": age_columns,
         "weeks_lived": weeks_lived,
         "weeks_remaining": weeks_remaining,
         "percent_used": round((weeks_lived / total_weeks) * 100, 1),
@@ -179,4 +181,3 @@ def health_check():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=False)
-

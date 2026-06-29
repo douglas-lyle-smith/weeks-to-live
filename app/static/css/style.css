@@ -27,9 +27,9 @@ body {
 }
 
 .app-shell {
-    width: min(1180px, calc(100vw - 32px));
+    width: min(1440px, calc(100vw - 32px));
     margin: 0 auto;
-    padding: 28px 0 40px;
+    padding: 20px 0 28px;
 }
 
 .topbar {
@@ -86,7 +86,7 @@ h1 {
 
 .layout {
     display: grid;
-    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
     gap: 18px;
     align-items: start;
 }
@@ -235,29 +235,52 @@ button:hover {
 
 .timeline-wrap {
     overflow-x: auto;
-    padding-bottom: 8px;
+    padding-bottom: 4px;
 }
 
 .timeline {
+    --age-count: 80;
     display: grid;
-    grid-template-columns: 44px repeat(52, 10px);
-    gap: 4px;
-    align-items: center;
-    min-width: 780px;
+    grid-template-columns: 32px repeat(var(--age-count), minmax(3px, 1fr));
+    grid-template-rows: 18px repeat(52, minmax(4px, 1fr));
+    gap: 2px;
+    align-items: stretch;
+    width: 100%;
+    min-width: 680px;
+    height: clamp(360px, 58vh, 540px);
 }
 
-.year-label {
+.axis-corner,
+.age-label,
+.week-label {
     color: var(--muted);
-    font-size: 0.76rem;
+    font-size: 0.62rem;
     font-weight: 800;
-    text-align: right;
-    padding-right: 6px;
+    line-height: 1;
+}
+
+.axis-corner {
+    align-self: end;
+}
+
+.age-label {
+    align-self: end;
+    overflow: hidden;
+    text-align: center;
+}
+
+.week-label {
+    align-self: center;
+    justify-self: end;
+    padding-right: 4px;
 }
 
 .week {
     position: relative;
-    width: 10px;
-    height: 10px;
+    align-self: center;
+    justify-self: center;
+    width: min(100%, 8px);
+    aspect-ratio: 1;
     border-radius: 999px;
     background: var(--future);
     border: 1px solid rgba(15, 23, 42, 0.12);
@@ -270,33 +293,38 @@ button:hover {
 .week.event::after {
     content: "";
     position: absolute;
-    inset: -3px;
+    inset: -2px;
     border: 2px solid var(--event-color, var(--event));
     border-radius: 999px;
 }
 
+.week.outside {
+    visibility: hidden;
+}
+
 .events {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 10px;
-    margin-top: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
 }
 
 .event-card {
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 12px;
+    padding: 8px 10px;
     background: #ffffff;
 }
 
 .event-card strong {
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
+    font-size: 0.88rem;
 }
 
 .event-card span {
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
 }
 
 @media (max-width: 900px) {
@@ -325,4 +353,3 @@ button:hover {
         grid-template-columns: 1fr;
     }
 }
-

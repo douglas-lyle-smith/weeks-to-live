@@ -28,27 +28,60 @@ function eventMap(events) {
 function renderTimeline(data) {
     timeline.innerHTML = "";
     const eventsByWeek = eventMap(data.events);
+    const ageColumns = data.age_columns || Math.ceil(data.total_weeks / 52);
+    const fragment = document.createDocumentFragment();
 
-    for (let index = 0; index < data.total_weeks; index += 1) {
-        if (index % 52 === 0) {
-            const label = document.createElement("div");
-            label.className = "year-label";
-            label.textContent = Math.floor(index / 52);
-            timeline.appendChild(label);
+    timeline.style.setProperty("--age-count", ageColumns);
+
+    const corner = document.createElement("div");
+    corner.className = "axis-corner";
+    corner.textContent = "Age";
+    fragment.appendChild(corner);
+
+    for (let age = 0; age < ageColumns; age += 1) {
+        const label = document.createElement("div");
+        label.className = "age-label";
+        label.title = `Age ${age}`;
+        if (age % 5 === 0 || age === ageColumns - 1) {
+            label.textContent = age;
         }
-
-        const week = document.createElement("div");
-        week.className = `week ${index < data.weeks_lived ? "spent" : ""}`;
-
-        const event = eventsByWeek.get(index);
-        if (event) {
-            week.classList.add("event");
-            week.style.setProperty("--event-color", event.color);
-            week.title = `${event.name}, age ${event.age}`;
-        }
-
-        timeline.appendChild(week);
+        fragment.appendChild(label);
     }
+
+    for (let weekOfYear = 0; weekOfYear < 52; weekOfYear += 1) {
+        const weekLabel = document.createElement("div");
+        weekLabel.className = "week-label";
+        weekLabel.title = `Week ${weekOfYear + 1}`;
+        if (weekOfYear === 0 || weekOfYear === 51 || weekOfYear % 13 === 12) {
+            weekLabel.textContent = weekOfYear + 1;
+        }
+        fragment.appendChild(weekLabel);
+
+        for (let age = 0; age < ageColumns; age += 1) {
+            const index = age * 52 + weekOfYear;
+            const week = document.createElement("div");
+
+            if (index >= data.total_weeks) {
+                week.className = "week outside";
+                fragment.appendChild(week);
+                continue;
+            }
+
+            week.className = `week ${index < data.weeks_lived ? "spent" : ""}`;
+            week.title = `Age ${age}, week ${weekOfYear + 1}`;
+
+            const event = eventsByWeek.get(index);
+            if (event) {
+                week.classList.add("event");
+                week.style.setProperty("--event-color", event.color);
+                week.title = `${event.name}, age ${event.age}`;
+            }
+
+            fragment.appendChild(week);
+        }
+    }
+
+    timeline.appendChild(fragment);
 }
 
 function renderEvents(events) {

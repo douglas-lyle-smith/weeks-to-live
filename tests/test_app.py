@@ -11,6 +11,7 @@ def test_calculate_life_stats_returns_expected_counts():
     stats = calculate_life_stats("1980-09-08", "70", as_of=date(2026, 6, 29))
 
     assert stats["death_date"] == "2050-09-08"
+    assert stats["age_columns"] == (stats["total_weeks"] + 51) // 52
     assert stats["weeks_lived"] == 2390
     assert stats["weeks_remaining"] > 0
     assert stats["total_weeks"] >= stats["weeks_lived"]
@@ -33,4 +34,3 @@ def test_health_endpoint():
 
     assert response.status_code == 200
     assert response.get_json()["status"] == "healthy"
-
