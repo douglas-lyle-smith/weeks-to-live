@@ -7,6 +7,9 @@ const editableEvents = document.querySelector("#editable-events");
 const eventForm = document.querySelector("#event-form");
 const eventSubmit = document.querySelector("#event-submit");
 const cancelEventEdit = document.querySelector("#cancel-event-edit");
+const exportEventsCsvButton = document.querySelector("#export-events-csv");
+const importEventsCsvButton = document.querySelector("#import-events-csv");
+const eventsCsvFile = document.querySelector("#events-csv-file");
 const tabs = document.querySelectorAll(".tab");
 const panels = document.querySelectorAll(".tab-panel");
 
@@ -389,6 +392,139 @@ async function deleteEvent(eventId) {
     }
 }
 
+function csvCell(value) {
+    const text = String(value ?? "");
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+}
+
+function exportEventsCsvFile() {
+    const headers = ["name", "age", "date", "color"];
+    const rows = [headers.join(",")];
+    sortEvents(state.events).forEach((event) => {
+        rows.push(headers.map((header) => csvCell(event[header])).join(","));
+    });
+    const blob = new Blob([`${rows.join("\r\n")}\r\n`], { type: "text/csv;charset=utf-8" });
+    downloadBlob(blob, "weeks-to-live-events.csv");
+}
+
+function parseCsvRows(text) {
+    const rows = [];
+    let row = [];
+    let field = "";
+    let inQuotes = false;
+    const source = text.replace(/^\uFEFF/, "");
+
+    for (let index = 0; index < source.length; index += 1) {
+        const char = source[index];
+        const next = source[index + 1];
+        if (inQuotes) {
+            if (char === '"' && next === '"') {
+                field += '"';
+                index += 1;
+            } else if (char === '"') {
+                inQuotes = false;
+            } else {
+                field += char;
+            }
+        } else if (char === '"') {
+            inQuotes = true;
+        } else if (char === ",") {
+            row.push(field);
+            field = "";
+        } else if (char === "\n") {
+            row.push(field);
+            rows.push(row);
+            row = [];
+            field = "";
+        } else if (char !== "\r") {
+            field += char;
+        }
+    }
+
+    if (inQuotes) {
+        throw new Error("CSV has an unterminated quoted field.");
+    }
+
+    if (field || row.length) {
+        row.push(field);
+        rows.push(row);
+    }
+
+    return rows.filter((cells) => cells.some((cell) => cell.trim()));
+}
+
+function normalizeCsvHeader(value) {
+    const normalized = String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (normalized === "eventname") return "name";
+    if (normalized === "eventage" || normalized === "ageyears") return "age";
+    if (normalized === "eventdate" || normalized === "datelabel") return "date";
+    if (normalized === "eventcolor" || normalized === "colour") return "color";
+    return normalized;
+}
+
+function eventsFromCsv(text) {
+    const rows = parseCsvRows(text);
+    if (rows.length < 2) {
+        throw new Error("CSV must include headers and at least one event row.");
+    }
+
+    const headers = rows[0].map(normalizeCsvHeader);
+    const requiredHeaders = ["name", "age", "date", "color"];
+    const indexes = Object.fromEntries(requiredHeaders.map((header) => [header, headers.indexOf(header)]));
+    const missingHeaders = requiredHeaders.filter((header) => indexes[header] === -1);
+    if (missingHeaders.length) {
+        throw new Error(`CSV headers must include ${requiredHeaders.join(", ")}. Export CSV to get the expected header row.`);
+    }
+
+    return rows.slice(1)
+        .map((row, index) => ({
+            name: row[indexes.name] || "",
+            age: row[indexes.age] || "",
+            date: row[indexes.date] || "",
+            color: row[indexes.color] || "",
+            _row: index + 2,
+        }))
+        .filter((event) => event.name.trim() || String(event.age).trim() || event.date.trim() || event.color.trim());
+}
+
+async function importEventsCsvFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
+        return;
+    }
+
+    try {
+        clearError();
+        const importedEvents = eventsFromCsv(await file.text());
+        if (!importedEvents.length) {
+            throw new Error("CSV did not contain any event rows.");
+        }
+        await requestJson("/api/events/import", {
+            method: "POST",
+            body: JSON.stringify({ events: importedEvents }),
+        });
+        resetEventForm();
+        await loadEvents();
+        await calculate();
+        switchTab("events");
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        event.target.value = "";
+    }
+}
+
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
@@ -404,6 +540,12 @@ cancelEventEdit.addEventListener("click", () => {
     renderEditableEvents();
 });
 tabs.forEach((tab) => tab.addEventListener("click", () => switchTab(tab.dataset.tab)));
+exportEventsCsvButton.addEventListener("click", exportEventsCsvFile);
+importEventsCsvButton.addEventListener("click", () => {
+    eventsCsvFile.value = "";
+    eventsCsvFile.click();
+});
+eventsCsvFile.addEventListener("change", importEventsCsvFile);
 
 function rerenderForViewport() {
     if (state.latestData) {

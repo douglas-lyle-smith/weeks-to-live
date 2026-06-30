@@ -362,6 +362,29 @@ def create_event():
     return jsonify(event), 201
 
 
+@app.route("/api/events/import", methods=["POST"])
+def import_events():
+    payload = request.get_json(silent=True) or {}
+    raw_events = payload.get("events")
+    if not isinstance(raw_events, list) or not raw_events:
+        return jsonify({"error": "Import requires at least one event row."}), 400
+
+    imported_events = []
+    for index, raw_event in enumerate(raw_events, start=2):
+        if not isinstance(raw_event, dict):
+            return jsonify({"error": f"Row {index}: event row is invalid."}), 400
+        row_number = raw_event.get("_row", index)
+        try:
+            imported_events.append(validate_event(raw_event, event_id=uuid4().hex))
+        except ValueError as exc:
+            return jsonify({"error": f"Row {row_number}: {exc}"}), 400
+
+    events = load_events()
+    events.extend(imported_events)
+    write_events(events)
+    return jsonify({"imported": len(imported_events), "events": load_events()}), 201
+
+
 @app.route("/api/events/<event_id>", methods=["PUT"])
 def update_event(event_id: str):
     events = load_events()

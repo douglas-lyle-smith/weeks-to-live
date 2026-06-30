@@ -432,6 +432,20 @@ button:hover {
     padding: 18px;
 }
 
+.events-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.events-toolbar button {
+    width: auto;
+    min-height: 36px;
+    padding: 0 12px;
+}
+
 .event-form {
     display: grid;
     grid-template-columns: minmax(180px, 1.25fr) 110px minmax(160px, 1fr) 92px 150px;

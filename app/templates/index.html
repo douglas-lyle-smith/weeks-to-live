@@ -80,6 +80,11 @@
                 </section>
 
                 <section class="panel events-panel tab-panel" id="events-tab">
+                    <div class="events-toolbar">
+                        <button id="export-events-csv" class="secondary-button" type="button">Export CSV</button>
+                        <button id="import-events-csv" class="secondary-button" type="button">Import CSV</button>
+                        <input id="events-csv-file" type="file" accept=".csv,text/csv" hidden>
+                    </div>
                     <form class="event-form" id="event-form">
                         <div class="field">
                             <label for="event-name">Event Name</label>
