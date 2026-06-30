@@ -58,19 +58,52 @@
                 </div>
             </aside>
 
-            <section class="panel visual">
-                <div class="visual-header">
-                    <h2>Life In Weeks</h2>
-                    <div class="legend" aria-label="Legend">
-                        <span class="legend-item"><span class="dot spent"></span> Lived</span>
-                        <span class="legend-item"><span class="dot"></span> Remaining</span>
-                        <span class="legend-item"><span class="dot event"></span> Milestone</span>
+            <section class="content">
+                <nav class="tabs" aria-label="Weeks To Live sections">
+                    <button class="tab active" type="button" data-tab="chart">Chart</button>
+                    <button class="tab" type="button" data-tab="events">Events</button>
+                </nav>
+
+                <section class="panel visual tab-panel active" id="chart-tab">
+                    <div class="visual-header">
+                        <h2>Life In Weeks</h2>
+                        <div class="legend" aria-label="Legend">
+                            <span class="legend-item"><span class="dot spent"></span> Lived</span>
+                            <span class="legend-item"><span class="dot"></span> Remaining</span>
+                            <span class="legend-item"><span class="dot event"></span> Event</span>
+                        </div>
                     </div>
-                </div>
-                <div class="timeline-wrap">
-                    <div class="timeline" id="timeline" aria-label="Life in weeks timeline"></div>
-                </div>
-                <div class="events" id="events"></div>
+                    <div class="timeline-wrap">
+                        <div class="timeline" id="timeline" aria-label="Life in weeks timeline"></div>
+                    </div>
+                    <div class="events" id="events"></div>
+                </section>
+
+                <section class="panel events-panel tab-panel" id="events-tab">
+                    <form class="event-form" id="event-form">
+                        <div class="field">
+                            <label for="event-name">Event Name</label>
+                            <input id="event-name" name="name" type="text" maxlength="140" required>
+                        </div>
+                        <div class="field compact-field">
+                            <label for="event-age">Age</label>
+                            <input id="event-age" name="age" type="number" min="0" max="130" step="0.1" required>
+                        </div>
+                        <div class="field">
+                            <label for="event-date">Date Label</label>
+                            <input id="event-date" name="date" type="text" maxlength="80" required>
+                        </div>
+                        <div class="field color-field">
+                            <label for="event-color">Color</label>
+                            <input id="event-color" name="color" type="color" value="#0f766e" required>
+                        </div>
+                        <div class="event-form-actions">
+                            <button id="event-submit" type="submit">Add Event</button>
+                            <button id="cancel-event-edit" class="secondary-button" type="button" hidden>Cancel</button>
+                        </div>
+                    </form>
+                    <div class="editable-events" id="editable-events"></div>
+                </section>
             </section>
         </section>
     </main>

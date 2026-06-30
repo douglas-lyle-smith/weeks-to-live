@@ -17,6 +17,62 @@ def test_calculate_life_stats_returns_expected_counts():
     assert stats["total_weeks"] >= stats["weeks_lived"]
 
 
+def test_calculate_api_persists_settings(tmp_path, monkeypatch):
+    monkeypatch.setenv("WEEKS_TO_LIVE_DATA_DIR", str(tmp_path))
+    client = app.test_client()
+
+    response = client.post(
+        "/api/calculate",
+        json={"birthdate": "1990-01-02", "life_expectancy": 81.5},
+    )
+    settings_response = client.get("/api/settings")
+
+    assert response.status_code == 200
+    assert settings_response.status_code == 200
+    assert settings_response.get_json() == {
+        "birthdate": "1990-01-02",
+        "life_expectancy": 81.5,
+    }
+
+
+def test_event_crud_persists_to_json(tmp_path, monkeypatch):
+    monkeypatch.setenv("WEEKS_TO_LIVE_DATA_DIR", str(tmp_path))
+    client = app.test_client()
+
+    create_response = client.post(
+        "/api/events",
+        json={
+            "name": "Test Milestone",
+            "age": 12.5,
+            "date": "Test Date",
+            "color": "#123abc",
+        },
+    )
+    assert create_response.status_code == 201
+    event = create_response.get_json()
+
+    update_response = client.put(
+        f"/api/events/{event['id']}",
+        json={
+            "name": "Updated Milestone",
+            "age": 13,
+            "date": "Updated Date",
+            "color": "#abcdef",
+        },
+    )
+    assert update_response.status_code == 200
+    assert update_response.get_json()["id"] == event["id"]
+
+    list_response = client.get("/api/events")
+    updated = [item for item in list_response.get_json()["events"] if item["id"] == event["id"]][0]
+    assert updated["name"] == "Updated Milestone"
+    assert updated["age"] == 13
+
+    delete_response = client.delete(f"/api/events/{event['id']}")
+    assert delete_response.status_code == 200
+    assert event["id"] not in {item["id"] for item in client.get("/api/events").get_json()["events"]}
+
+
 def test_calculate_api_rejects_future_birthdate():
     client = app.test_client()
     response = client.post(

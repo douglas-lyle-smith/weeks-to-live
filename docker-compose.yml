@@ -10,6 +10,9 @@ services:
     environment:
       - FLASK_ENV=${FLASK_ENV:-production}
       - TZ=${TZ:-America/New_York}
+      - WEEKS_TO_LIVE_DATA_DIR=/app/data
+    volumes:
+      - weeks-to-live-data:/app/data
     networks:
       - lexington-network
     healthcheck:
@@ -23,3 +26,5 @@ networks:
   lexington-network:
     external: true
 
+volumes:
+  weeks-to-live-data:
