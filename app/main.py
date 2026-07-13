@@ -77,6 +77,146 @@ DEFAULT_EVENTS = [
         "color": "#374151",
         "date": "December 10, 1979",
     },
+    {
+        "id": "malala-yousafzai-nobel-peace-prize",
+        "name": "Malala Yousafzai Receives Nobel Peace Prize",
+        "age": 17.41,
+        "color": "#db2777",
+        "date": "December 10, 2014",
+    },
+    {
+        "id": "jane-goodall-arrives-at-gombe",
+        "name": "Jane Goodall Arrives at Gombe",
+        "age": 26.28,
+        "color": "#0f766e",
+        "date": "July 14, 1960",
+    },
+    {
+        "id": "einstein-special-relativity",
+        "name": "Einstein Publishes Special Relativity",
+        "age": 26.29,
+        "color": "#4f46e5",
+        "date": "June 30, 1905",
+    },
+    {
+        "id": "stanton-seneca-falls-convention",
+        "name": "Elizabeth Cady Stanton Seneca Falls Convention",
+        "age": 32.69,
+        "color": "#ea580c",
+        "date": "July 19, 1848",
+    },
+    {
+        "id": "rosalind-franklin-dna-paper",
+        "name": "Rosalind Franklin DNA Paper Published",
+        "age": 32.75,
+        "color": "#7c3aed",
+        "date": "April 25, 1953",
+    },
+    {
+        "id": "florence-nightingale-scutari",
+        "name": "Florence Nightingale Arrives at Scutari",
+        "age": 34.48,
+        "color": "#be123c",
+        "date": "November 4, 1854",
+    },
+    {
+        "id": "marie-curie-nobel-physics",
+        "name": "Marie Curie Awarded Nobel Prize in Physics",
+        "age": 36.09,
+        "color": "#9333ea",
+        "date": "December 10, 1903",
+    },
+    {
+        "id": "jonas-salk-polio-vaccine-announced",
+        "name": "Jonas Salk Polio Vaccine Announced",
+        "age": 40.46,
+        "color": "#0284c7",
+        "date": "April 12, 1955",
+    },
+    {
+        "id": "grace-hopper-first-computer-bug",
+        "name": "Grace Hopper's Team Logs First Computer Bug",
+        "age": 40.75,
+        "color": "#ca8a04",
+        "date": "September 9, 1947",
+    },
+    {
+        "id": "alexander-fleming-discovers-penicillin",
+        "name": "Alexander Fleming Discovers Penicillin",
+        "age": 47.14,
+        "color": "#059669",
+        "date": "September 28, 1928",
+    },
+    {
+        "id": "darwin-origin-of-species",
+        "name": "Darwin Publishes Origin of Species",
+        "age": 50.78,
+        "color": "#65a30d",
+        "date": "November 24, 1859",
+    },
+    {
+        "id": "susan-b-anthony-votes",
+        "name": "Susan B. Anthony Casts Her Vote",
+        "age": 52.72,
+        "color": "#d946ef",
+        "date": "November 5, 1872",
+    },
+    {
+        "id": "desmond-tutu-nobel-peace-prize",
+        "name": "Desmond Tutu Receives Nobel Peace Prize",
+        "age": 53.18,
+        "color": "#1d4ed8",
+        "date": "December 10, 1984",
+    },
+    {
+        "id": "rachel-carson-silent-spring",
+        "name": "Rachel Carson Publishes Silent Spring",
+        "age": 55.34,
+        "color": "#15803d",
+        "date": "September 27, 1962",
+    },
+    {
+        "id": "clara-barton-american-red-cross",
+        "name": "Clara Barton Founds American Red Cross",
+        "age": 59.4,
+        "color": "#b91c1c",
+        "date": "May 21, 1881",
+    },
+    {
+        "id": "louis-pasteur-rabies-vaccination",
+        "name": "Pasteur First Human Rabies Vaccination",
+        "age": 62.53,
+        "color": "#0e7490",
+        "date": "July 6, 1885",
+    },
+    {
+        "id": "eleanor-roosevelt-udhr-adoption",
+        "name": "Eleanor Roosevelt Leads UDHR Adoption",
+        "age": 64.16,
+        "color": "#7e22ce",
+        "date": "December 10, 1948",
+    },
+    {
+        "id": "wangari-maathai-nobel-peace-prize",
+        "name": "Wangari Maathai Receives Nobel Peace Prize",
+        "age": 64.69,
+        "color": "#047857",
+        "date": "December 10, 2004",
+    },
+    {
+        "id": "nelson-mandela-inaugurated-president",
+        "name": "Nelson Mandela Inaugurated President",
+        "age": 75.81,
+        "color": "#f97316",
+        "date": "May 10, 1994",
+    },
+    {
+        "id": "barbara-mcclintock-nobel-prize",
+        "name": "Barbara McClintock Receives Nobel Prize",
+        "age": 81.49,
+        "color": "#14b8a6",
+        "date": "December 10, 1983",
+    },
 ]
 
 DAYS_PER_YEAR = 365.2425
@@ -87,6 +227,30 @@ HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 DEFAULT_SETTINGS = {
     "birthdate": "1980-09-08",
     "life_expectancy": 78.6,
+}
+DEFAULT_EVENT_MIGRATIONS = {
+    "2026-07-historical-events": [
+        "malala-yousafzai-nobel-peace-prize",
+        "jane-goodall-arrives-at-gombe",
+        "einstein-special-relativity",
+        "stanton-seneca-falls-convention",
+        "rosalind-franklin-dna-paper",
+        "florence-nightingale-scutari",
+        "marie-curie-nobel-physics",
+        "jonas-salk-polio-vaccine-announced",
+        "grace-hopper-first-computer-bug",
+        "alexander-fleming-discovers-penicillin",
+        "darwin-origin-of-species",
+        "susan-b-anthony-votes",
+        "desmond-tutu-nobel-peace-prize",
+        "rachel-carson-silent-spring",
+        "clara-barton-american-red-cross",
+        "louis-pasteur-rabies-vaccination",
+        "eleanor-roosevelt-udhr-adoption",
+        "wangari-maathai-nobel-peace-prize",
+        "nelson-mandela-inaugurated-president",
+        "barbara-mcclintock-nobel-prize",
+    ],
 }
 
 
@@ -105,6 +269,10 @@ def settings_path() -> Path:
     return data_dir() / "settings.json"
 
 
+def event_migrations_path() -> Path:
+    return data_dir() / "event_migrations.json"
+
+
 def normalize_event_id(value: str | None = None) -> str:
     cleaned = re.sub(r"[^a-z0-9-]+", "-", (value or "").lower()).strip("-")
     return cleaned or uuid4().hex
@@ -118,11 +286,74 @@ def seed_events() -> list[dict]:
     return sorted_events([dict(event) for event in DEFAULT_EVENTS])
 
 
+def load_event_migrations() -> set[str]:
+    path = event_migrations_path()
+    if not path.exists():
+        return set()
+
+    with path.open("r", encoding="utf-8") as handle:
+        raw_migrations = json.load(handle)
+
+    if not isinstance(raw_migrations, list):
+        return set()
+
+    return {str(migration_id) for migration_id in raw_migrations}
+
+
+def write_event_migrations(migration_ids: set[str]) -> None:
+    path = event_migrations_path()
+    tmp_path = path.with_suffix(".tmp")
+    with tmp_path.open("w", encoding="utf-8") as handle:
+        json.dump(sorted(migration_ids), handle, indent=2)
+        handle.write("\n")
+    tmp_path.replace(path)
+
+
+def mark_default_event_migrations_applied() -> None:
+    applied = load_event_migrations()
+    updated = applied | set(DEFAULT_EVENT_MIGRATIONS)
+    if updated != applied:
+        write_event_migrations(updated)
+
+
+def apply_default_event_migrations(events: list[dict]) -> list[dict]:
+    default_events_by_id = {event["id"]: event for event in DEFAULT_EVENTS}
+    applied = load_event_migrations()
+    seen_ids = {event["id"] for event in events}
+    migrated_events = False
+    migrated_ids = False
+
+    for migration_id, event_ids in DEFAULT_EVENT_MIGRATIONS.items():
+        if migration_id in applied:
+            continue
+
+        for event_id in event_ids:
+            if event_id in seen_ids:
+                continue
+            event = default_events_by_id.get(event_id)
+            if event is None:
+                continue
+            events.append(dict(event))
+            seen_ids.add(event_id)
+            migrated_events = True
+
+        applied.add(migration_id)
+        migrated_ids = True
+
+    if migrated_events:
+        write_events(events)
+    if migrated_ids:
+        write_event_migrations(applied)
+
+    return sorted_events(events)
+
+
 def load_events() -> list[dict]:
     path = events_path()
     if not path.exists():
         events = seed_events()
         write_events(events)
+        mark_default_event_migrations_applied()
         return events
 
     with path.open("r", encoding="utf-8") as handle:
@@ -136,7 +367,7 @@ def load_events() -> list[dict]:
             normalized["id"] = uuid4().hex
         seen_ids.add(normalized["id"])
         events.append(normalized)
-    return sorted_events(events)
+    return apply_default_event_migrations(events)
 
 
 def write_events(events: list[dict]) -> None:

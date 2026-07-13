@@ -1,6 +1,7 @@
+import json
 from datetime import date
 
-from app.main import app, calculate_life_stats, estimate_death_date
+from app.main import DEFAULT_EVENT_MIGRATIONS, app, calculate_life_stats, estimate_death_date
 
 
 def test_estimate_death_date_for_whole_years():
@@ -112,6 +113,43 @@ def test_event_import_rejects_bad_row_without_partial_write(tmp_path, monkeypatc
     assert response.status_code == 400
     assert "Row 3" in response.get_json()["error"]
     assert after_events == before_events
+
+
+def test_existing_event_file_gets_default_event_migration_once(tmp_path, monkeypatch):
+    monkeypatch.setenv("WEEKS_TO_LIVE_DATA_DIR", str(tmp_path))
+    migrated_event_ids = DEFAULT_EVENT_MIGRATIONS["2026-07-historical-events"]
+    legacy_event = {
+        "id": "legacy-custom-event",
+        "name": "Legacy Custom Event",
+        "age": 10,
+        "date": "Already persisted",
+        "color": "#123abc",
+    }
+    (tmp_path / "events.json").write_text(json.dumps([legacy_event]), encoding="utf-8")
+    client = app.test_client()
+
+    migrated_ids = {event["id"] for event in client.get("/api/events").get_json()["events"]}
+    assert "legacy-custom-event" in migrated_ids
+    assert set(migrated_event_ids).issubset(migrated_ids)
+    assert "jesus-crucified" not in migrated_ids
+
+    delete_response = client.delete(f"/api/events/{migrated_event_ids[0]}")
+    reloaded_ids = {event["id"] for event in client.get("/api/events").get_json()["events"]}
+    assert delete_response.status_code == 200
+    assert migrated_event_ids[0] not in reloaded_ids
+
+
+def test_fresh_seed_marks_default_event_migrations_applied(tmp_path, monkeypatch):
+    monkeypatch.setenv("WEEKS_TO_LIVE_DATA_DIR", str(tmp_path))
+    migrated_event_id = DEFAULT_EVENT_MIGRATIONS["2026-07-historical-events"][0]
+    client = app.test_client()
+
+    assert migrated_event_id in {event["id"] for event in client.get("/api/events").get_json()["events"]}
+    delete_response = client.delete(f"/api/events/{migrated_event_id}")
+    reloaded_ids = {event["id"] for event in client.get("/api/events").get_json()["events"]}
+
+    assert delete_response.status_code == 200
+    assert migrated_event_id not in reloaded_ids
 
 
 def test_calculate_api_rejects_future_birthdate():
