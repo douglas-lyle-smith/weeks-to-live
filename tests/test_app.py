@@ -1,7 +1,7 @@
 import json
 from datetime import date
 
-from app.main import DEFAULT_EVENT_MIGRATIONS, app, calculate_life_stats, estimate_death_date
+from app.main import DEFAULT_EVENTS, DEFAULT_EVENT_MIGRATIONS, app, calculate_life_stats, estimate_death_date
 
 
 def test_estimate_death_date_for_whole_years():
@@ -137,6 +137,17 @@ def test_existing_event_file_gets_default_event_migration_once(tmp_path, monkeyp
     reloaded_ids = {event["id"] for event in client.get("/api/events").get_json()["events"]}
     assert delete_response.status_code == 200
     assert migrated_event_ids[0] not in reloaded_ids
+
+
+def test_default_event_migrations_reference_default_events():
+    default_ids = {event["id"] for event in DEFAULT_EVENTS}
+    migrated_ids = {
+        event_id
+        for event_ids in DEFAULT_EVENT_MIGRATIONS.values()
+        for event_id in event_ids
+    }
+
+    assert migrated_ids.issubset(default_ids)
 
 
 def test_fresh_seed_marks_default_event_migrations_applied(tmp_path, monkeypatch):
