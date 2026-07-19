@@ -10,8 +10,10 @@ const cancelEventEdit = document.querySelector("#cancel-event-edit");
 const exportEventsCsvButton = document.querySelector("#export-events-csv");
 const importEventsCsvButton = document.querySelector("#import-events-csv");
 const eventsCsvFile = document.querySelector("#events-csv-file");
+const showEventsToggle = document.querySelector("#show-events-toggle");
 const tabs = document.querySelectorAll(".tab");
 const panels = document.querySelectorAll(".tab-panel");
+const EVENTS_VISIBILITY_STORAGE_KEY = "weeksToLiveShowEvents";
 
 const eventInputs = {
     name: document.querySelector("#event-name"),
@@ -34,6 +36,7 @@ const state = {
     latestData: null,
     activeEventId: null,
     editingEventId: null,
+    showEvents: loadEventsVisibility(),
 };
 
 function formatDate(value) {
@@ -68,6 +71,26 @@ async function requestJson(url, options = {}) {
 
 function sortEvents(events) {
     return [...events].sort((a, b) => Number(a.age) - Number(b.age) || a.name.localeCompare(b.name));
+}
+
+function loadEventsVisibility() {
+    try {
+        return window.localStorage.getItem(EVENTS_VISIBILITY_STORAGE_KEY) !== "false";
+    } catch (error) {
+        return true;
+    }
+}
+
+function saveEventsVisibility() {
+    try {
+        window.localStorage.setItem(EVENTS_VISIBILITY_STORAGE_KEY, state.showEvents ? "true" : "false");
+    } catch (error) {
+        // Browsers may block localStorage in private or locked-down contexts.
+    }
+}
+
+function visibleChartEvents(data) {
+    return state.showEvents ? data.events : [];
 }
 
 function eventMap(events) {
@@ -118,7 +141,7 @@ function createWeek(index, age, weekOfYear, data, eventsByWeek) {
 
 function renderHorizontalTimeline(data) {
     setTimelineOrientation("horizontal");
-    const eventsByWeek = eventMap(data.events);
+    const eventsByWeek = eventMap(visibleChartEvents(data));
     const ageColumns = data.age_columns || Math.ceil(data.total_weeks / 52);
     const fragment = document.createDocumentFragment();
 
@@ -159,7 +182,7 @@ function renderHorizontalTimeline(data) {
 
 function renderVerticalTimeline(data) {
     setTimelineOrientation("vertical");
-    const eventsByWeek = eventMap(data.events);
+    const eventsByWeek = eventMap(visibleChartEvents(data));
     const ageColumns = data.age_columns || Math.ceil(data.total_weeks / 52);
     const fragment = document.createDocumentFragment();
 
@@ -207,6 +230,7 @@ function renderTimeline(data) {
 
 function renderChartEvents(events) {
     eventsList.innerHTML = "";
+    eventsList.hidden = !state.showEvents;
     sortEvents(events).forEach((event) => {
         const card = document.createElement("button");
         card.type = "button";
@@ -281,11 +305,21 @@ function highlightEvent(eventId) {
         return;
     }
     renderTimeline(state.latestData);
-    renderChartEvents(state.latestData.events);
+    renderChartEvents(visibleChartEvents(state.latestData));
 
     const target = [...timeline.querySelectorAll(".week.event")]
         .find((week) => (week.dataset.eventIds || "").split(" ").includes(eventId));
     target?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+}
+
+function setEventsVisibility(showEvents) {
+    state.showEvents = showEvents;
+    showEventsToggle.checked = showEvents;
+    saveEventsVisibility();
+    if (state.latestData) {
+        renderTimeline(state.latestData);
+        renderChartEvents(visibleChartEvents(state.latestData));
+    }
 }
 
 function switchTab(tabName) {
@@ -349,7 +383,7 @@ async function calculate() {
     renderStats(data);
     state.latestData = data;
     renderTimeline(data);
-    renderChartEvents(data.events);
+    renderChartEvents(visibleChartEvents(data));
 }
 
 async function saveEvent(event) {
@@ -546,11 +580,13 @@ importEventsCsvButton.addEventListener("click", () => {
     eventsCsvFile.click();
 });
 eventsCsvFile.addEventListener("change", importEventsCsvFile);
+showEventsToggle.addEventListener("change", () => setEventsVisibility(showEventsToggle.checked));
+showEventsToggle.checked = state.showEvents;
 
 function rerenderForViewport() {
     if (state.latestData) {
         renderTimeline(state.latestData);
-        renderChartEvents(state.latestData.events);
+        renderChartEvents(visibleChartEvents(state.latestData));
     }
 }
 

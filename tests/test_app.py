@@ -190,3 +190,13 @@ def test_index_uses_versioned_static_assets():
     assert response.status_code == 200
     assert "/static/css/style.css?v=" in html
     assert "/static/js/main.js?v=" in html
+
+
+def test_index_includes_events_visibility_toggle():
+    client = app.test_client()
+    response = client.get("/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'id="show-events-toggle"' in html
+    assert 'role="switch"' in html

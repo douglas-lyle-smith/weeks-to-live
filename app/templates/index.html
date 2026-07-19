@@ -67,10 +67,17 @@
                 <section class="panel visual tab-panel active" id="chart-tab">
                     <div class="visual-header">
                         <h2>Life In Weeks</h2>
-                        <div class="legend" aria-label="Legend">
-                            <span class="legend-item"><span class="dot spent"></span> Lived</span>
-                            <span class="legend-item"><span class="dot"></span> Remaining</span>
-                            <span class="legend-item"><span class="dot event"></span> Event</span>
+                        <div class="visual-tools">
+                            <label class="events-toggle" for="show-events-toggle">
+                                <span>Events</span>
+                                <input id="show-events-toggle" type="checkbox" role="switch" checked>
+                                <span class="switch-slider" aria-hidden="true"></span>
+                            </label>
+                            <div class="legend" aria-label="Legend">
+                                <span class="legend-item"><span class="dot spent"></span> Lived</span>
+                                <span class="legend-item"><span class="dot"></span> Remaining</span>
+                                <span class="legend-item"><span class="dot event"></span> Event</span>
+                            </div>
                         </div>
                     </div>
                     <div class="timeline-wrap">
