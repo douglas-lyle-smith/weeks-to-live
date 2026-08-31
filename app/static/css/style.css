@@ -11,7 +11,7 @@
     --spent: #334155;
     --future: #f6d365;
     --event: #ef4444;
-    --personal: #2563eb;
+    --personal: #f97316;
     --shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
 }
 
@@ -582,6 +582,48 @@ button:hover {
 
 .events-panel {
     padding: 18px;
+}
+
+.settings-form {
+    display: block;
+}
+
+.settings-heading {
+    font-size: 1.25rem;
+    margin-bottom: 4px;
+}
+
+.settings-hint {
+    color: var(--muted);
+    margin-bottom: 18px;
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    max-width: 720px;
+}
+
+.settings-grid .field {
+    margin-bottom: 0;
+}
+
+.settings-grid input[type="color"] {
+    min-height: 52px;
+    cursor: pointer;
+}
+
+.settings-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.settings-actions button {
+    width: auto;
+    min-width: 160px;
 }
 
 .events-toolbar {

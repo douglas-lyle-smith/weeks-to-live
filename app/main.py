@@ -436,11 +436,19 @@ MAX_EVENT_DATE_LABEL_LENGTH = 80
 MAX_PERSONAL_EVENT_NAME_LENGTH = 200
 MAX_PERSONAL_EVENT_DETAILS_LENGTH = 4000
 MAX_PERSONAL_EVENT_TIMELINES_LENGTH = 400
-DEFAULT_PERSONAL_EVENT_COLOR = "#2563eb"
+DEFAULT_PERSONAL_EVENT_COLOR = "#f97316"
 HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+COLOR_KEYS = ("lived", "remaining", "personal", "historical")
+DEFAULT_COLORS = {
+    "lived": "#334155",       # Lived weeks (--spent)
+    "remaining": "#f6d365",   # Remaining weeks (--future)
+    "personal": "#f97316",    # Personal Event dots (--personal) — orange by default
+    "historical": "#ef4444",  # Historical Figure Milestone dots (--event)
+}
 DEFAULT_SETTINGS = {
     "birthdate": "1980-09-08",
     "life_expectancy": 78.6,
+    "colors": dict(DEFAULT_COLORS),
 }
 DEFAULT_EVENT_MIGRATIONS = {
     "2026-07-historical-events": [
@@ -809,12 +817,27 @@ def validate_event(payload: dict, event_id: str | None = None) -> dict:
     }
 
 
+def validate_colors(payload) -> dict:
+    colors = dict(DEFAULT_COLORS)
+    if isinstance(payload, dict):
+        for key in COLOR_KEYS:
+            value = payload.get(key)
+            if value is None:
+                continue
+            value = str(value).strip()
+            if not HEX_COLOR_RE.fullmatch(value):
+                raise ValueError(f"{key.capitalize()} color must be a 6-digit hex color.")
+            colors[key] = value.lower()
+    return colors
+
+
 def validate_settings(payload: dict) -> dict:
     birthdate = parse_birthdate(payload.get("birthdate", DEFAULT_SETTINGS["birthdate"])).isoformat()
     life_expectancy = parse_life_expectancy(payload.get("life_expectancy", DEFAULT_SETTINGS["life_expectancy"]))
     return {
         "birthdate": birthdate,
         "life_expectancy": round(life_expectancy, 2),
+        "colors": validate_colors(payload.get("colors")),
     }
 
 
@@ -945,6 +968,9 @@ def index():
 @app.route("/api/calculate", methods=["POST"])
 def calculate():
     payload = request.get_json(silent=True) or {}
+    # The calculate form only submits birthdate + life_expectancy; keep any saved
+    # dot colors so recalculating never resets Settings.
+    payload.setdefault("colors", load_settings().get("colors"))
 
     try:
         settings = validate_settings(payload)
@@ -965,6 +991,29 @@ def calculate():
 def get_settings():
     try:
         settings = load_settings()
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(settings)
+
+
+@app.route("/api/settings", methods=["POST"])
+def update_settings():
+    incoming = request.get_json(silent=True) or {}
+    current = load_settings()
+    merged = dict(current)
+
+    for key in ("birthdate", "life_expectancy"):
+        if incoming.get(key) is not None:
+            merged[key] = incoming[key]
+
+    if isinstance(incoming.get("colors"), dict):
+        merged_colors = dict(current.get("colors", DEFAULT_COLORS))
+        merged_colors.update({k: v for k, v in incoming["colors"].items() if k in COLOR_KEYS})
+        merged["colors"] = merged_colors
+
+    try:
+        settings = validate_settings(merged)
+        write_settings(settings)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     return jsonify(settings)

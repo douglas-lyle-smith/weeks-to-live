@@ -63,6 +63,7 @@
                     <button class="tab active" type="button" data-tab="chart">Chart</button>
                     <button class="tab" type="button" data-tab="personal">Personal Events</button>
                     <button class="tab" type="button" data-tab="events">Historical Figure Milestones</button>
+                    <button class="tab" type="button" data-tab="settings">Settings</button>
                 </nav>
 
                 <section class="panel visual tab-panel active" id="chart-tab">
@@ -115,7 +116,7 @@
                         </div>
                         <div class="field color-field">
                             <label for="personal-color">Color</label>
-                            <input id="personal-color" name="color" type="color" value="#2563eb" required>
+                            <input id="personal-color" name="color" type="color" value="#f97316" required>
                         </div>
                         <div class="field personal-details-field">
                             <label for="personal-details">Details</label>
@@ -158,6 +159,36 @@
                         </div>
                     </form>
                     <div class="editable-events" id="editable-events"></div>
+                </section>
+
+                <section class="panel events-panel tab-panel" id="settings-tab">
+                    <form class="settings-form" id="settings-form">
+                        <h2 class="settings-heading">Dot Colors</h2>
+                        <p class="settings-hint">Choose the colors used for each type of dot on the chart.</p>
+                        <div class="settings-grid">
+                            <div class="field color-field">
+                                <label for="color-lived">Lived</label>
+                                <input id="color-lived" name="lived" type="color" required>
+                            </div>
+                            <div class="field color-field">
+                                <label for="color-remaining">Remaining</label>
+                                <input id="color-remaining" name="remaining" type="color" required>
+                            </div>
+                            <div class="field color-field">
+                                <label for="color-personal">Personal Event</label>
+                                <input id="color-personal" name="personal" type="color" required>
+                            </div>
+                            <div class="field color-field">
+                                <label for="color-historical">Historical Dots</label>
+                                <input id="color-historical" name="historical" type="color" required>
+                            </div>
+                        </div>
+                        <div class="settings-actions">
+                            <button id="settings-submit" type="submit">Save Colors</button>
+                            <button id="settings-reset" class="secondary-button" type="button">Reset to Defaults</button>
+                        </div>
+                        <div class="error" id="settings-error"></div>
+                    </form>
                 </section>
             </section>
         </section>

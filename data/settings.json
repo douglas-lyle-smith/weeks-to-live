@@ -1,0 +1,10 @@
+{
+  "birthdate": "1980-09-08",
+  "colors": {
+    "historical": "#ef4444",
+    "lived": "#334155",
+    "personal": "#f97316",
+    "remaining": "#f6d365"
+  },
+  "life_expectancy": 78.6
+}

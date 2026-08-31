@@ -37,10 +37,56 @@ def test_calculate_api_persists_settings(tmp_path, monkeypatch):
 
     assert response.status_code == 200
     assert settings_response.status_code == 200
-    assert settings_response.get_json() == {
-        "birthdate": "1990-01-02",
-        "life_expectancy": 81.5,
-    }
+    body = settings_response.get_json()
+    assert body["birthdate"] == "1990-01-02"
+    assert body["life_expectancy"] == 81.5
+    # Personal Event dots default to orange.
+    assert body["colors"]["personal"] == "#f97316"
+    assert set(body["colors"]) == {"lived", "remaining", "personal", "historical"}
+
+
+def test_update_settings_colors_persist(tmp_path, monkeypatch):
+    monkeypatch.setenv("WEEKS_TO_LIVE_DATA_DIR", str(tmp_path))
+    client = app.test_client()
+
+    response = client.post("/api/settings", json={"colors": {"lived": "#111111", "personal": "#00ff00"}})
+    assert response.status_code == 200
+    colors = response.get_json()["colors"]
+    assert colors["lived"] == "#111111"
+    assert colors["personal"] == "#00ff00"
+    # Untouched keys keep their defaults.
+    assert colors["remaining"] == "#f6d365"
+    assert colors["historical"] == "#ef4444"
+
+    # Recalculating must NOT reset the saved colors.
+    client.post("/api/calculate", json={"birthdate": "1980-09-08", "life_expectancy": 78.6})
+    assert client.get("/api/settings").get_json()["colors"]["personal"] == "#00ff00"
+
+
+def test_update_settings_rejects_bad_color(tmp_path, monkeypatch):
+    monkeypatch.setenv("WEEKS_TO_LIVE_DATA_DIR", str(tmp_path))
+    client = app.test_client()
+    response = client.post("/api/settings", json={"colors": {"lived": "not-a-color"}})
+    assert response.status_code == 400
+    assert "color" in response.get_json()["error"].lower()
+
+
+def test_legacy_settings_file_gains_default_colors(tmp_path, monkeypatch):
+    monkeypatch.setenv("WEEKS_TO_LIVE_DATA_DIR", str(tmp_path))
+    (tmp_path / "settings.json").write_text(
+        json.dumps({"birthdate": "1975-03-04", "life_expectancy": 80}), encoding="utf-8"
+    )
+    client = app.test_client()
+    body = client.get("/api/settings").get_json()
+    assert body["birthdate"] == "1975-03-04"
+    assert body["colors"]["personal"] == "#f97316"
+
+
+def test_index_includes_settings_tab():
+    client = app.test_client()
+    html = client.get("/").get_data(as_text=True)
+    assert 'data-tab="settings"' in html
+    assert 'id="color-personal"' in html
 
 
 def test_event_crud_persists_to_json(tmp_path, monkeypatch):

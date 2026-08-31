@@ -20,10 +20,36 @@ const importPersonalCsvButton = document.querySelector("#import-personal-csv");
 const personalCsvFile = document.querySelector("#personal-csv-file");
 const showEventsToggle = document.querySelector("#show-events-toggle");
 const showPersonalEventsToggle = document.querySelector("#show-personal-events-toggle");
+const settingsForm = document.querySelector("#settings-form");
+const settingsSubmit = document.querySelector("#settings-submit");
+const settingsReset = document.querySelector("#settings-reset");
+const settingsError = document.querySelector("#settings-error");
 const tabs = document.querySelectorAll(".tab");
 const panels = document.querySelectorAll(".tab-panel");
 const EVENTS_VISIBILITY_STORAGE_KEY = "weeksToLiveShowEvents";
 const PERSONAL_EVENTS_VISIBILITY_STORAGE_KEY = "weeksToLiveShowPersonalEvents";
+
+const DEFAULT_COLORS = {
+    lived: "#334155",
+    remaining: "#f6d365",
+    personal: "#f97316",
+    historical: "#ef4444",
+};
+
+// Settings color key -> CSS custom property that paints that dot type.
+const COLOR_CSS_VARS = {
+    lived: "--spent",
+    remaining: "--future",
+    personal: "--personal",
+    historical: "--event",
+};
+
+const colorInputs = {
+    lived: document.querySelector("#color-lived"),
+    remaining: document.querySelector("#color-remaining"),
+    personal: document.querySelector("#color-personal"),
+    historical: document.querySelector("#color-historical"),
+};
 
 const eventInputs = {
     name: document.querySelector("#event-name"),
@@ -59,6 +85,7 @@ const state = {
     editingPersonalId: null,
     showEvents: loadEventsVisibility(),
     showPersonalEvents: loadPersonalEventsVisibility(),
+    colors: { ...DEFAULT_COLORS },
 };
 
 function formatDate(value) {
@@ -592,7 +619,7 @@ function resetPersonalEventForm() {
     personalSubmit.textContent = "Add Personal Event";
     cancelPersonalEdit.hidden = true;
     personalEventForm.reset();
-    personalInputs.color.value = "#2563eb";
+    personalInputs.color.value = state.colors.personal;
 }
 
 function beginEditPersonalEvent(eventId) {
@@ -613,10 +640,56 @@ function beginEditPersonalEvent(eventId) {
     personalInputs.name.focus();
 }
 
+function applyColors(colors) {
+    Object.entries(COLOR_CSS_VARS).forEach(([key, cssVar]) => {
+        const value = colors?.[key];
+        if (value) {
+            document.documentElement.style.setProperty(cssVar, value);
+        }
+    });
+}
+
+function populateColorInputs(colors) {
+    Object.entries(colorInputs).forEach(([key, input]) => {
+        if (input && colors?.[key]) {
+            input.value = colors[key];
+        }
+    });
+}
+
+function useColors(colors) {
+    state.colors = { ...DEFAULT_COLORS, ...(colors || {}) };
+    applyColors(state.colors);
+    populateColorInputs(state.colors);
+    if (!state.editingPersonalId) {
+        personalInputs.color.value = state.colors.personal;
+    }
+}
+
+function showSettingsError(message) {
+    settingsError.textContent = message;
+    settingsError.style.display = "block";
+}
+
+function clearSettingsError() {
+    settingsError.textContent = "";
+    settingsError.style.display = "none";
+}
+
+async function saveColors(colors) {
+    clearSettingsError();
+    const settings = await requestJson("/api/settings", {
+        method: "POST",
+        body: JSON.stringify({ colors }),
+    });
+    useColors(settings.colors);
+}
+
 async function loadSettings() {
     const settings = await requestJson("/api/settings");
     form.birthdate.value = settings.birthdate;
     form.life_expectancy.value = settings.life_expectancy;
+    useColors(settings.colors);
 }
 
 async function loadEvents() {
@@ -1003,6 +1076,36 @@ showEventsToggle.addEventListener("change", () => setEventsVisibility(showEvents
 showEventsToggle.checked = state.showEvents;
 showPersonalEventsToggle.addEventListener("change", () => setPersonalEventsVisibility(showPersonalEventsToggle.checked));
 showPersonalEventsToggle.checked = state.showPersonalEvents;
+
+settingsForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+        await saveColors({
+            lived: colorInputs.lived.value,
+            remaining: colorInputs.remaining.value,
+            personal: colorInputs.personal.value,
+            historical: colorInputs.historical.value,
+        });
+    } catch (error) {
+        showSettingsError(error.message);
+    }
+});
+// Live preview as the user picks colors, without persisting until Save.
+// Dots read the CSS custom properties directly, so setting them repaints the
+// chart with no re-render.
+Object.entries(colorInputs).forEach(([key, input]) => {
+    input.addEventListener("input", () => {
+        document.documentElement.style.setProperty(COLOR_CSS_VARS[key], input.value);
+    });
+});
+settingsReset.addEventListener("click", async () => {
+    populateColorInputs(DEFAULT_COLORS);
+    try {
+        await saveColors({ ...DEFAULT_COLORS });
+    } catch (error) {
+        showSettingsError(error.message);
+    }
+});
 
 function rerenderForViewport() {
     rerenderChart();
