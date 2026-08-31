@@ -434,7 +434,7 @@ button:hover {
 
 .week.event {
     background: #ffffff;
-    border-color: var(--event-color, var(--event));
+    border-color: var(--event);
     border-width: 2px;
 }
 
@@ -442,7 +442,7 @@ button:hover {
     content: "";
     position: absolute;
     inset: -3px;
-    border: 2px solid var(--event-color, var(--event));
+    border: 2px solid var(--event);
     border-radius: 999px;
     opacity: 0.46;
 }
@@ -452,7 +452,7 @@ button:hover {
     transform: scale(2.3);
     box-shadow:
         0 0 0 5px rgba(255, 255, 255, 0.95),
-        0 0 0 9px var(--event-color, var(--event)),
+        0 0 0 9px var(--event),
         0 18px 34px rgba(15, 23, 42, 0.28);
 }
 
@@ -474,8 +474,8 @@ button:hover {
 }
 
 .week.personal-event {
-    background: var(--personal-color, var(--personal));
-    border-color: color-mix(in srgb, var(--personal-color, var(--personal)) 55%, #0b1220);
+    background: var(--personal);
+    border-color: color-mix(in srgb, var(--personal) 55%, #0b1220);
     border-width: 1px;
 }
 
@@ -488,7 +488,7 @@ button:hover {
     transform: scale(2.3);
     box-shadow:
         0 0 0 4px rgba(255, 255, 255, 0.95),
-        0 0 0 8px var(--personal-color, var(--personal)),
+        0 0 0 8px var(--personal),
         0 18px 34px rgba(15, 23, 42, 0.28);
 }
 
@@ -552,18 +552,32 @@ button:hover {
     display: none;
 }
 
+.personal-card {
+    border-left-color: var(--personal);
+}
+
+.personal-card:hover,
+.personal-card.active {
+    border-color: var(--personal);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--personal) 20%, transparent);
+}
+
 .personal-card .personal-tag {
     display: inline-block;
     align-self: start;
     margin-bottom: 4px;
     padding: 2px 8px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--event-color, var(--personal)) 16%, #ffffff);
-    color: var(--event-color, var(--personal));
+    background: color-mix(in srgb, var(--personal) 16%, #ffffff);
+    color: var(--personal);
     font-size: 0.66rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.02em;
+}
+
+.personal-editable .event-swatch {
+    border-color: var(--personal);
 }
 
 .personal-card .personal-when {
@@ -653,7 +667,7 @@ button:hover {
 }
 
 .personal-event-form {
-    grid-template-columns: minmax(180px, 1.6fr) 150px 150px 92px;
+    grid-template-columns: minmax(180px, 1.6fr) 150px 150px;
 }
 
 .personal-details-field {

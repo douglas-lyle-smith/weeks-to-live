@@ -63,7 +63,6 @@ const personalInputs = {
     date: document.querySelector("#personal-date"),
     end_date: document.querySelector("#personal-end-date"),
     details: document.querySelector("#personal-details"),
-    color: document.querySelector("#personal-color"),
 };
 
 const stats = {
@@ -233,7 +232,6 @@ function createWeek(index, age, weekOfYear, data, eventsByWeek, personalByWeek) 
         week.classList.add("personal-event");
         week.classList.toggle("active-personal", personalIds.includes(state.activePersonalId));
         week.dataset.personalIds = personalIds.join(" ");
-        week.style.setProperty("--personal-color", displayPersonal.color);
         week.title = personalEvents
             .map((event) => `${event.name} (${event.date}${event.end_date && event.end_date !== event.date ? ` – ${event.end_date}` : ""})`)
             .join("\n");
@@ -246,7 +244,6 @@ function createWeek(index, age, weekOfYear, data, eventsByWeek, personalByWeek) 
         week.classList.add("event");
         week.classList.toggle("active-event", eventIds.includes(state.activeEventId));
         week.dataset.eventIds = eventIds.join(" ");
-        week.style.setProperty("--event-color", displayEvent.color);
         week.title = weekEvents.map((event) => `${event.name}, age ${event.age}`).join("\n");
     }
 
@@ -393,7 +390,6 @@ function renderPersonalCards(events) {
         card.type = "button";
         card.className = "event-card personal-card";
         card.classList.toggle("active", event.id === state.activePersonalId);
-        card.style.setProperty("--event-color", event.color);
 
         const tag = document.createElement("span");
         tag.className = "personal-tag";
@@ -476,7 +472,6 @@ function renderEditablePersonalEvents() {
         row.className = "editable-event personal-editable";
         row.classList.toggle("editing", event.id === state.editingPersonalId);
         row.classList.toggle("disabled", event.enabled === false);
-        row.style.setProperty("--event-color", event.color);
 
         const swatch = document.createElement("span");
         swatch.className = "event-swatch";
@@ -619,7 +614,6 @@ function resetPersonalEventForm() {
     personalSubmit.textContent = "Add Personal Event";
     cancelPersonalEdit.hidden = true;
     personalEventForm.reset();
-    personalInputs.color.value = state.colors.personal;
 }
 
 function beginEditPersonalEvent(eventId) {
@@ -632,7 +626,6 @@ function beginEditPersonalEvent(eventId) {
     personalInputs.date.value = event.date;
     personalInputs.end_date.value = event.end_date && event.end_date !== event.date ? event.end_date : "";
     personalInputs.details.value = event.details || "";
-    personalInputs.color.value = event.color;
     personalSubmit.textContent = "Save Personal Event";
     cancelPersonalEdit.hidden = false;
     personalEventForm.classList.add("editing");
@@ -661,9 +654,6 @@ function useColors(colors) {
     state.colors = { ...DEFAULT_COLORS, ...(colors || {}) };
     applyColors(state.colors);
     populateColorInputs(state.colors);
-    if (!state.editingPersonalId) {
-        personalInputs.color.value = state.colors.personal;
-    }
 }
 
 function showSettingsError(message) {
@@ -778,7 +768,6 @@ async function savePersonalEvent(event) {
             date: personalInputs.date.value,
             end_date: personalInputs.end_date.value,
             details: personalInputs.details.value,
-            color: personalInputs.color.value,
         };
         const editingPersonalId = state.editingPersonalId;
         await requestJson(editingPersonalId ? `/api/personal-events/${editingPersonalId}` : "/api/personal-events", {
