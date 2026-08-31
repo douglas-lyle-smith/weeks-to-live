@@ -61,29 +61,72 @@
             <section class="content">
                 <nav class="tabs" aria-label="Weeks To Live sections">
                     <button class="tab active" type="button" data-tab="chart">Chart</button>
-                    <button class="tab" type="button" data-tab="events">Events</button>
+                    <button class="tab" type="button" data-tab="personal">Personal Events</button>
+                    <button class="tab" type="button" data-tab="events">Historical Figure Milestones</button>
                 </nav>
 
                 <section class="panel visual tab-panel active" id="chart-tab">
                     <div class="visual-header">
                         <h2>Life In Weeks</h2>
                         <div class="visual-tools">
+                            <label class="events-toggle" for="show-personal-events-toggle">
+                                <span>Personal Events</span>
+                                <input id="show-personal-events-toggle" type="checkbox" role="switch" checked>
+                                <span class="switch-slider" aria-hidden="true"></span>
+                            </label>
                             <label class="events-toggle" for="show-events-toggle">
-                                <span>Events</span>
+                                <span>Historical Figure Milestones</span>
                                 <input id="show-events-toggle" type="checkbox" role="switch" checked>
                                 <span class="switch-slider" aria-hidden="true"></span>
                             </label>
                             <div class="legend" aria-label="Legend">
                                 <span class="legend-item"><span class="dot spent"></span> Lived</span>
                                 <span class="legend-item"><span class="dot"></span> Remaining</span>
-                                <span class="legend-item"><span class="dot event"></span> Event</span>
+                                <span class="legend-item"><span class="dot personal"></span> Personal Event</span>
+                                <span class="legend-item"><span class="dot event"></span> Historical Milestone</span>
                             </div>
                         </div>
                     </div>
                     <div class="timeline-wrap">
                         <div class="timeline" id="timeline" aria-label="Life in weeks timeline"></div>
                     </div>
+                    <div class="personal-events-cards" id="personal-events-cards"></div>
                     <div class="events" id="events"></div>
+                </section>
+
+                <section class="panel events-panel tab-panel" id="personal-tab">
+                    <div class="events-toolbar">
+                        <button id="export-personal-csv" class="secondary-button" type="button">Export CSV</button>
+                        <button id="import-personal-csv" class="secondary-button" type="button">Import CSV</button>
+                        <input id="personal-csv-file" type="file" accept=".csv,text/csv" hidden>
+                    </div>
+                    <form class="event-form personal-event-form" id="personal-event-form">
+                        <div class="field">
+                            <label for="personal-name">Event Name</label>
+                            <input id="personal-name" name="name" type="text" maxlength="200" required>
+                        </div>
+                        <div class="field compact-field">
+                            <label for="personal-date">Start Date</label>
+                            <input id="personal-date" name="date" type="date" required>
+                        </div>
+                        <div class="field compact-field">
+                            <label for="personal-end-date">End Date</label>
+                            <input id="personal-end-date" name="end_date" type="date">
+                        </div>
+                        <div class="field color-field">
+                            <label for="personal-color">Color</label>
+                            <input id="personal-color" name="color" type="color" value="#2563eb" required>
+                        </div>
+                        <div class="field personal-details-field">
+                            <label for="personal-details">Details</label>
+                            <textarea id="personal-details" name="details" maxlength="4000" rows="2"></textarea>
+                        </div>
+                        <div class="event-form-actions">
+                            <button id="personal-submit" type="submit">Add Personal Event</button>
+                            <button id="cancel-personal-edit" class="secondary-button" type="button" hidden>Cancel</button>
+                        </div>
+                    </form>
+                    <div class="editable-events" id="editable-personal-events"></div>
                 </section>
 
                 <section class="panel events-panel tab-panel" id="events-tab">

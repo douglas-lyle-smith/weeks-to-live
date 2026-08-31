@@ -3,23 +3,41 @@ const errorBox = document.querySelector("#error");
 const todayText = document.querySelector("#today");
 const timeline = document.querySelector("#timeline");
 const eventsList = document.querySelector("#events");
+const personalEventsCards = document.querySelector("#personal-events-cards");
 const editableEvents = document.querySelector("#editable-events");
+const editablePersonalEvents = document.querySelector("#editable-personal-events");
 const eventForm = document.querySelector("#event-form");
+const personalEventForm = document.querySelector("#personal-event-form");
 const eventSubmit = document.querySelector("#event-submit");
+const personalSubmit = document.querySelector("#personal-submit");
 const cancelEventEdit = document.querySelector("#cancel-event-edit");
+const cancelPersonalEdit = document.querySelector("#cancel-personal-edit");
 const exportEventsCsvButton = document.querySelector("#export-events-csv");
 const importEventsCsvButton = document.querySelector("#import-events-csv");
 const eventsCsvFile = document.querySelector("#events-csv-file");
+const exportPersonalCsvButton = document.querySelector("#export-personal-csv");
+const importPersonalCsvButton = document.querySelector("#import-personal-csv");
+const personalCsvFile = document.querySelector("#personal-csv-file");
 const showEventsToggle = document.querySelector("#show-events-toggle");
+const showPersonalEventsToggle = document.querySelector("#show-personal-events-toggle");
 const tabs = document.querySelectorAll(".tab");
 const panels = document.querySelectorAll(".tab-panel");
 const EVENTS_VISIBILITY_STORAGE_KEY = "weeksToLiveShowEvents";
+const PERSONAL_EVENTS_VISIBILITY_STORAGE_KEY = "weeksToLiveShowPersonalEvents";
 
 const eventInputs = {
     name: document.querySelector("#event-name"),
     age: document.querySelector("#event-age"),
     date: document.querySelector("#event-date"),
     color: document.querySelector("#event-color"),
+};
+
+const personalInputs = {
+    name: document.querySelector("#personal-name"),
+    date: document.querySelector("#personal-date"),
+    end_date: document.querySelector("#personal-end-date"),
+    details: document.querySelector("#personal-details"),
+    color: document.querySelector("#personal-color"),
 };
 
 const stats = {
@@ -33,10 +51,14 @@ const stats = {
 const compactQuery = window.matchMedia("(max-width: 700px)");
 const state = {
     events: [],
+    personalEvents: [],
     latestData: null,
     activeEventId: null,
+    activePersonalId: null,
     editingEventId: null,
+    editingPersonalId: null,
     showEvents: loadEventsVisibility(),
+    showPersonalEvents: loadPersonalEventsVisibility(),
 };
 
 function formatDate(value) {
@@ -89,8 +111,39 @@ function saveEventsVisibility() {
     }
 }
 
+function loadPersonalEventsVisibility() {
+    try {
+        return window.localStorage.getItem(PERSONAL_EVENTS_VISIBILITY_STORAGE_KEY) !== "false";
+    } catch (error) {
+        return true;
+    }
+}
+
+function savePersonalEventsVisibility() {
+    try {
+        window.localStorage.setItem(
+            PERSONAL_EVENTS_VISIBILITY_STORAGE_KEY,
+            state.showPersonalEvents ? "true" : "false",
+        );
+    } catch (error) {
+        // Browsers may block localStorage in private or locked-down contexts.
+    }
+}
+
 function visibleChartEvents(data) {
     return state.showEvents ? data.events : [];
+}
+
+function visibleChartPersonalEvents(data) {
+    return state.showPersonalEvents ? data.personal_events || [] : [];
+}
+
+function formatDateRange(startValue, endValue) {
+    const start = formatDate(startValue);
+    if (!endValue || endValue === startValue) {
+        return start;
+    }
+    return `${start} – ${formatDate(endValue)}`;
 }
 
 function eventMap(events) {
@@ -101,6 +154,27 @@ function eventMap(events) {
         mapped.set(event.week_index, bucket);
     });
     return mapped;
+}
+
+function personalEventMap(events) {
+    const mapped = new Map();
+    events.forEach((event) => {
+        const start = Number(event.week_start);
+        const end = Number(event.week_end);
+        for (let week = start; week <= end; week += 1) {
+            const bucket = mapped.get(week) || [];
+            bucket.push(event);
+            mapped.set(week, bucket);
+        }
+    });
+    return mapped;
+}
+
+function personalEventForWeek(events) {
+    if (!events?.length) {
+        return null;
+    }
+    return events.find((event) => event.id === state.activePersonalId) || events[0];
 }
 
 function setTimelineOrientation(orientation) {
@@ -115,7 +189,7 @@ function eventForWeek(events) {
     return events.find((event) => event.id === state.activeEventId) || events[0];
 }
 
-function createWeek(index, age, weekOfYear, data, eventsByWeek) {
+function createWeek(index, age, weekOfYear, data, eventsByWeek, personalByWeek) {
     const week = document.createElement("div");
     if (index >= data.total_weeks) {
         week.className = "week outside";
@@ -124,6 +198,19 @@ function createWeek(index, age, weekOfYear, data, eventsByWeek) {
 
     week.className = `week ${index < data.weeks_lived ? "spent" : ""}`;
     week.title = `Age ${age}, week ${weekOfYear + 1}`;
+
+    const personalEvents = personalByWeek.get(index) || [];
+    const displayPersonal = personalEventForWeek(personalEvents);
+    if (displayPersonal) {
+        const personalIds = personalEvents.map((event) => event.id);
+        week.classList.add("personal-event");
+        week.classList.toggle("active-personal", personalIds.includes(state.activePersonalId));
+        week.dataset.personalIds = personalIds.join(" ");
+        week.style.setProperty("--personal-color", displayPersonal.color);
+        week.title = personalEvents
+            .map((event) => `${event.name} (${event.date}${event.end_date && event.end_date !== event.date ? ` – ${event.end_date}` : ""})`)
+            .join("\n");
+    }
 
     const weekEvents = eventsByWeek.get(index) || [];
     const displayEvent = eventForWeek(weekEvents);
@@ -136,12 +223,24 @@ function createWeek(index, age, weekOfYear, data, eventsByWeek) {
         week.title = weekEvents.map((event) => `${event.name}, age ${event.age}`).join("\n");
     }
 
+    if (displayPersonal || displayEvent) {
+        week.classList.add("clickable");
+        week.addEventListener("click", () => {
+            if (displayPersonal) {
+                highlightPersonalEvent(displayPersonal.id);
+            } else {
+                highlightEvent(displayEvent.id);
+            }
+        });
+    }
+
     return week;
 }
 
 function renderHorizontalTimeline(data) {
     setTimelineOrientation("horizontal");
     const eventsByWeek = eventMap(visibleChartEvents(data));
+    const personalByWeek = personalEventMap(visibleChartPersonalEvents(data));
     const ageColumns = data.age_columns || Math.ceil(data.total_weeks / 52);
     const fragment = document.createDocumentFragment();
 
@@ -173,7 +272,7 @@ function renderHorizontalTimeline(data) {
 
         for (let age = 0; age < ageColumns; age += 1) {
             const index = age * 52 + weekOfYear;
-            fragment.appendChild(createWeek(index, age, weekOfYear, data, eventsByWeek));
+            fragment.appendChild(createWeek(index, age, weekOfYear, data, eventsByWeek, personalByWeek));
         }
     }
 
@@ -183,6 +282,7 @@ function renderHorizontalTimeline(data) {
 function renderVerticalTimeline(data) {
     setTimelineOrientation("vertical");
     const eventsByWeek = eventMap(visibleChartEvents(data));
+    const personalByWeek = personalEventMap(visibleChartPersonalEvents(data));
     const ageColumns = data.age_columns || Math.ceil(data.total_weeks / 52);
     const fragment = document.createDocumentFragment();
 
@@ -212,7 +312,7 @@ function renderVerticalTimeline(data) {
 
         for (let weekOfYear = 0; weekOfYear < 52; weekOfYear += 1) {
             const index = age * 52 + weekOfYear;
-            fragment.appendChild(createWeek(index, age, weekOfYear, data, eventsByWeek));
+            fragment.appendChild(createWeek(index, age, weekOfYear, data, eventsByWeek, personalByWeek));
         }
     }
 
@@ -246,6 +346,50 @@ function renderChartEvents(events) {
 
         card.addEventListener("click", () => highlightEvent(event.id));
         eventsList.appendChild(card);
+    });
+}
+
+function sortPersonalEvents(events) {
+    return [...events].sort(
+        (a, b) =>
+            String(a.date).localeCompare(String(b.date)) ||
+            String(a.end_date).localeCompare(String(b.end_date)) ||
+            a.name.localeCompare(b.name),
+    );
+}
+
+function renderPersonalCards(events) {
+    personalEventsCards.innerHTML = "";
+    personalEventsCards.hidden = !state.showPersonalEvents || !events.length;
+    sortPersonalEvents(events).forEach((event) => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "event-card personal-card";
+        card.classList.toggle("active", event.id === state.activePersonalId);
+        card.style.setProperty("--event-color", event.color);
+
+        const tag = document.createElement("span");
+        tag.className = "personal-tag";
+        tag.textContent = "Personal Event";
+
+        const name = document.createElement("strong");
+        name.textContent = event.name;
+
+        const when = document.createElement("span");
+        when.className = "personal-when";
+        when.textContent = formatDateRange(event.date, event.end_date);
+
+        card.append(tag, name, when);
+
+        if (event.details) {
+            const details = document.createElement("span");
+            details.className = "personal-details";
+            details.textContent = event.details;
+            card.append(details);
+        }
+
+        card.addEventListener("click", () => highlightPersonalEvent(event.id));
+        personalEventsCards.appendChild(card);
     });
 }
 
@@ -290,6 +434,75 @@ function renderEditableEvents() {
     });
 }
 
+function renderEditablePersonalEvents() {
+    editablePersonalEvents.innerHTML = "";
+    if (!state.personalEvents.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty-hint";
+        empty.textContent = "No personal events yet. Add one above or import a CSV.";
+        editablePersonalEvents.appendChild(empty);
+        return;
+    }
+
+    sortPersonalEvents(state.personalEvents).forEach((event) => {
+        const row = document.createElement("article");
+        row.className = "editable-event personal-editable";
+        row.classList.toggle("editing", event.id === state.editingPersonalId);
+        row.classList.toggle("disabled", event.enabled === false);
+        row.style.setProperty("--event-color", event.color);
+
+        const swatch = document.createElement("span");
+        swatch.className = "event-swatch";
+        swatch.setAttribute("aria-hidden", "true");
+
+        const summary = document.createElement("div");
+        summary.className = "editable-event-summary";
+        const name = document.createElement("strong");
+        name.textContent = event.name;
+        const meta = document.createElement("span");
+        meta.textContent = formatDateRange(event.date, event.end_date);
+        summary.append(name, meta);
+        if (event.details) {
+            const details = document.createElement("span");
+            details.className = "editable-details";
+            details.textContent = event.details;
+            summary.append(details);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "event-actions";
+
+        const toggle = document.createElement("label");
+        toggle.className = "record-toggle";
+        toggle.title = event.enabled === false ? "Hidden on chart" : "Shown on chart";
+        const toggleInput = document.createElement("input");
+        toggleInput.type = "checkbox";
+        toggleInput.setAttribute("role", "switch");
+        toggleInput.checked = event.enabled !== false;
+        toggleInput.addEventListener("change", () => togglePersonalEvent(event.id, toggleInput.checked));
+        const toggleSlider = document.createElement("span");
+        toggleSlider.className = "switch-slider";
+        toggleSlider.setAttribute("aria-hidden", "true");
+        toggle.append(toggleInput, toggleSlider);
+
+        const editButton = document.createElement("button");
+        editButton.className = "event-edit";
+        editButton.type = "button";
+        editButton.textContent = "Edit";
+        editButton.addEventListener("click", () => beginEditPersonalEvent(event.id));
+
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "event-delete";
+        deleteButton.type = "button";
+        deleteButton.textContent = "Delete";
+        deleteButton.addEventListener("click", () => deletePersonalEvent(event.id));
+
+        actions.append(toggle, editButton, deleteButton);
+        row.append(swatch, summary, actions);
+        editablePersonalEvents.appendChild(row);
+    });
+}
+
 function renderStats(data) {
     todayText.textContent = formatDate(data.today);
     stats.deathDate.textContent = formatDate(data.death_date);
@@ -299,16 +512,32 @@ function renderStats(data) {
     stats.percent.textContent = `${data.percent_used}%`;
 }
 
-function highlightEvent(eventId) {
-    state.activeEventId = eventId;
+function rerenderChart() {
     if (!state.latestData) {
         return;
     }
     renderTimeline(state.latestData);
     renderChartEvents(visibleChartEvents(state.latestData));
+    renderPersonalCards(visibleChartPersonalEvents(state.latestData));
+}
+
+function highlightEvent(eventId) {
+    state.activeEventId = eventId;
+    state.activePersonalId = null;
+    rerenderChart();
 
     const target = [...timeline.querySelectorAll(".week.event")]
         .find((week) => (week.dataset.eventIds || "").split(" ").includes(eventId));
+    target?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+}
+
+function highlightPersonalEvent(eventId) {
+    state.activePersonalId = eventId;
+    state.activeEventId = null;
+    rerenderChart();
+
+    const target = [...timeline.querySelectorAll(".week.personal-event")]
+        .find((week) => (week.dataset.personalIds || "").split(" ").includes(eventId));
     target?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
 }
 
@@ -316,10 +545,14 @@ function setEventsVisibility(showEvents) {
     state.showEvents = showEvents;
     showEventsToggle.checked = showEvents;
     saveEventsVisibility();
-    if (state.latestData) {
-        renderTimeline(state.latestData);
-        renderChartEvents(visibleChartEvents(state.latestData));
-    }
+    rerenderChart();
+}
+
+function setPersonalEventsVisibility(showPersonalEvents) {
+    state.showPersonalEvents = showPersonalEvents;
+    showPersonalEventsToggle.checked = showPersonalEvents;
+    savePersonalEventsVisibility();
+    rerenderChart();
 }
 
 function switchTab(tabName) {
@@ -353,6 +586,33 @@ function beginEditEvent(eventId) {
     eventInputs.name.focus();
 }
 
+function resetPersonalEventForm() {
+    state.editingPersonalId = null;
+    personalEventForm.classList.remove("editing");
+    personalSubmit.textContent = "Add Personal Event";
+    cancelPersonalEdit.hidden = true;
+    personalEventForm.reset();
+    personalInputs.color.value = "#2563eb";
+}
+
+function beginEditPersonalEvent(eventId) {
+    const event = state.personalEvents.find((item) => item.id === eventId);
+    if (!event) {
+        return;
+    }
+    state.editingPersonalId = event.id;
+    personalInputs.name.value = event.name;
+    personalInputs.date.value = event.date;
+    personalInputs.end_date.value = event.end_date && event.end_date !== event.date ? event.end_date : "";
+    personalInputs.details.value = event.details || "";
+    personalInputs.color.value = event.color;
+    personalSubmit.textContent = "Save Personal Event";
+    cancelPersonalEdit.hidden = false;
+    personalEventForm.classList.add("editing");
+    renderEditablePersonalEvents();
+    personalInputs.name.focus();
+}
+
 async function loadSettings() {
     const settings = await requestJson("/api/settings");
     form.birthdate.value = settings.birthdate;
@@ -363,6 +623,12 @@ async function loadEvents() {
     const data = await requestJson("/api/events");
     state.events = data.events;
     renderEditableEvents();
+}
+
+async function loadPersonalEvents() {
+    const data = await requestJson("/api/personal-events");
+    state.personalEvents = data.personal_events || [];
+    renderEditablePersonalEvents();
 }
 
 async function calculate() {
@@ -380,10 +646,15 @@ async function calculate() {
     if (state.activeEventId && !data.events.some((event) => event.id === state.activeEventId)) {
         state.activeEventId = null;
     }
+    const personalEvents = data.personal_events || [];
+    if (state.activePersonalId && !personalEvents.some((event) => event.id === state.activePersonalId)) {
+        state.activePersonalId = null;
+    }
     renderStats(data);
     state.latestData = data;
     renderTimeline(data);
     renderChartEvents(visibleChartEvents(data));
+    renderPersonalCards(visibleChartPersonalEvents(data));
 }
 
 async function saveEvent(event) {
@@ -423,6 +694,64 @@ async function deleteEvent(eventId) {
         await calculate();
     } catch (error) {
         showError(error.message);
+    }
+}
+
+async function savePersonalEvent(event) {
+    event.preventDefault();
+    try {
+        const payload = {
+            name: personalInputs.name.value,
+            date: personalInputs.date.value,
+            end_date: personalInputs.end_date.value,
+            details: personalInputs.details.value,
+            color: personalInputs.color.value,
+        };
+        const editingPersonalId = state.editingPersonalId;
+        await requestJson(editingPersonalId ? `/api/personal-events/${editingPersonalId}` : "/api/personal-events", {
+            method: editingPersonalId ? "PUT" : "POST",
+            body: JSON.stringify(payload),
+        });
+        resetPersonalEventForm();
+        await loadPersonalEvents();
+        await calculate();
+    } catch (error) {
+        showError(error.message);
+    }
+}
+
+async function deletePersonalEvent(eventId) {
+    const event = state.personalEvents.find((item) => item.id === eventId);
+    if (!event || !window.confirm(`Delete "${event.name}"?`)) {
+        return;
+    }
+    try {
+        await requestJson(`/api/personal-events/${eventId}`, { method: "DELETE" });
+        if (state.activePersonalId === eventId) {
+            state.activePersonalId = null;
+        }
+        if (state.editingPersonalId === eventId) {
+            resetPersonalEventForm();
+        }
+        await loadPersonalEvents();
+        await calculate();
+    } catch (error) {
+        showError(error.message);
+    }
+}
+
+async function togglePersonalEvent(eventId, enabled) {
+    try {
+        clearError();
+        await requestJson(`/api/personal-events/${eventId}/toggle`, {
+            method: "POST",
+            body: JSON.stringify({ enabled }),
+        });
+        await loadPersonalEvents();
+        await calculate();
+    } catch (error) {
+        showError(error.message);
+        await loadPersonalEvents();
     }
 }
 
@@ -559,6 +888,85 @@ async function importEventsCsvFile(event) {
     }
 }
 
+function exportPersonalCsvFile() {
+    const headers = ["date", "end_date", "name", "timelines", "details"];
+    const rows = [headers.join(",")];
+    sortPersonalEvents(state.personalEvents).forEach((event) => {
+        rows.push(headers.map((header) => csvCell(event[header])).join(","));
+    });
+    const blob = new Blob([`${rows.join("\r\n")}\r\n`], { type: "text/csv;charset=utf-8" });
+    downloadBlob(blob, "weeks-to-live-personal-events.csv");
+}
+
+function normalizePersonalCsvHeader(value) {
+    const normalized = String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (normalized === "date" || normalized === "startdate" || normalized === "start") return "date";
+    if (normalized === "enddate" || normalized === "end" || normalized === "finish") return "end_date";
+    if (normalized === "name" || normalized === "eventname" || normalized === "event" || normalized === "title") return "name";
+    if (normalized === "timelines" || normalized === "timeline") return "timelines";
+    if (normalized === "details" || normalized === "detail" || normalized === "description" || normalized === "notes") return "details";
+    return normalized;
+}
+
+function personalEventsFromCsv(text) {
+    const rows = parseCsvRows(text);
+    if (rows.length < 2) {
+        throw new Error("CSV must include headers and at least one event row.");
+    }
+
+    const headers = rows[0].map(normalizePersonalCsvHeader);
+    const requiredHeaders = ["date", "name"];
+    const optionalHeaders = ["end_date", "timelines", "details"];
+    const allHeaders = [...requiredHeaders, ...optionalHeaders];
+    const indexes = Object.fromEntries(allHeaders.map((header) => [header, headers.indexOf(header)]));
+    const missingHeaders = requiredHeaders.filter((header) => indexes[header] === -1);
+    if (missingHeaders.length) {
+        throw new Error(
+            "CSV headers must include date and name (optional: end_date, timelines, details). Export CSV to get the expected header row.",
+        );
+    }
+
+    const cell = (row, header) => (indexes[header] === -1 ? "" : row[indexes[header]] || "");
+
+    return rows.slice(1)
+        .map((row, index) => ({
+            date: cell(row, "date").trim(),
+            end_date: cell(row, "end_date").trim(),
+            name: cell(row, "name"),
+            timelines: cell(row, "timelines"),
+            details: cell(row, "details"),
+            _row: index + 2,
+        }))
+        .filter((event) => event.name.trim() || event.date.trim() || event.details.trim());
+}
+
+async function importPersonalCsvFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
+        return;
+    }
+
+    try {
+        clearError();
+        const importedEvents = personalEventsFromCsv(await file.text());
+        if (!importedEvents.length) {
+            throw new Error("CSV did not contain any personal event rows.");
+        }
+        await requestJson("/api/personal-events/import", {
+            method: "POST",
+            body: JSON.stringify({ events: importedEvents }),
+        });
+        resetPersonalEventForm();
+        await loadPersonalEvents();
+        await calculate();
+        switchTab("personal");
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        event.target.value = "";
+    }
+}
+
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
@@ -569,9 +977,14 @@ form.addEventListener("submit", async (event) => {
 });
 
 eventForm.addEventListener("submit", saveEvent);
+personalEventForm.addEventListener("submit", savePersonalEvent);
 cancelEventEdit.addEventListener("click", () => {
     resetEventForm();
     renderEditableEvents();
+});
+cancelPersonalEdit.addEventListener("click", () => {
+    resetPersonalEventForm();
+    renderEditablePersonalEvents();
 });
 tabs.forEach((tab) => tab.addEventListener("click", () => switchTab(tab.dataset.tab)));
 exportEventsCsvButton.addEventListener("click", exportEventsCsvFile);
@@ -580,14 +993,19 @@ importEventsCsvButton.addEventListener("click", () => {
     eventsCsvFile.click();
 });
 eventsCsvFile.addEventListener("change", importEventsCsvFile);
+exportPersonalCsvButton.addEventListener("click", exportPersonalCsvFile);
+importPersonalCsvButton.addEventListener("click", () => {
+    personalCsvFile.value = "";
+    personalCsvFile.click();
+});
+personalCsvFile.addEventListener("change", importPersonalCsvFile);
 showEventsToggle.addEventListener("change", () => setEventsVisibility(showEventsToggle.checked));
 showEventsToggle.checked = state.showEvents;
+showPersonalEventsToggle.addEventListener("change", () => setPersonalEventsVisibility(showPersonalEventsToggle.checked));
+showPersonalEventsToggle.checked = state.showPersonalEvents;
 
 function rerenderForViewport() {
-    if (state.latestData) {
-        renderTimeline(state.latestData);
-        renderChartEvents(visibleChartEvents(state.latestData));
-    }
+    rerenderChart();
 }
 
 if (typeof compactQuery.addEventListener === "function") {
@@ -600,6 +1018,7 @@ async function init() {
     try {
         await loadSettings();
         await loadEvents();
+        await loadPersonalEvents();
         await calculate();
     } catch (error) {
         showError(error.message);

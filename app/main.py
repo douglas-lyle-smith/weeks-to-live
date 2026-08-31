@@ -433,6 +433,10 @@ DAYS_PER_YEAR = 365.2425
 MAX_LIFE_EXPECTANCY = 130
 MAX_EVENT_NAME_LENGTH = 140
 MAX_EVENT_DATE_LABEL_LENGTH = 80
+MAX_PERSONAL_EVENT_NAME_LENGTH = 200
+MAX_PERSONAL_EVENT_DETAILS_LENGTH = 4000
+MAX_PERSONAL_EVENT_TIMELINES_LENGTH = 400
+DEFAULT_PERSONAL_EVENT_COLOR = "#2563eb"
 HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 DEFAULT_SETTINGS = {
     "birthdate": "1980-09-08",
@@ -642,6 +646,131 @@ def write_settings(settings: dict) -> None:
     tmp_path.replace(path)
 
 
+def personal_events_path() -> Path:
+    return data_dir() / "personal_events.json"
+
+
+def clean_optional_text(value: str | None, field_name: str, max_length: int) -> str:
+    text = (value or "").strip()
+    if len(text) > max_length:
+        raise ValueError(f"{field_name} cannot exceed {max_length} characters.")
+    return text
+
+
+def parse_iso_date(value: str | None, field_name: str) -> date:
+    text = (value or "").strip()
+    if not text:
+        raise ValueError(f"{field_name} is required.")
+    try:
+        return datetime.strptime(text, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValueError(f"{field_name} must use YYYY-MM-DD.") from exc
+
+
+def parse_bool(value, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return str(value).strip().lower() not in {"", "0", "false", "no", "off"}
+
+
+def validate_personal_event(payload: dict, event_id: str | None = None) -> dict:
+    name = clean_text(payload.get("name"), "Event name", MAX_PERSONAL_EVENT_NAME_LENGTH)
+    start = parse_iso_date(payload.get("date"), "Start date")
+
+    end_raw = (payload.get("end_date") or "").strip()
+    end = parse_iso_date(end_raw, "End date") if end_raw else start
+    if end < start:
+        raise ValueError("End date cannot be before the start date.")
+
+    details = clean_optional_text(payload.get("details"), "Details", MAX_PERSONAL_EVENT_DETAILS_LENGTH)
+    timelines = clean_optional_text(payload.get("timelines"), "Timelines", MAX_PERSONAL_EVENT_TIMELINES_LENGTH)
+
+    color = (payload.get("color") or DEFAULT_PERSONAL_EVENT_COLOR).strip() or DEFAULT_PERSONAL_EVENT_COLOR
+    if not HEX_COLOR_RE.fullmatch(color):
+        raise ValueError("Event color must be a 6-digit hex color.")
+
+    return {
+        "id": normalize_event_id(event_id or payload.get("id") or name),
+        "name": name,
+        "date": start.isoformat(),
+        "end_date": end.isoformat(),
+        "details": details,
+        "timelines": timelines,
+        "color": color.lower(),
+        "enabled": parse_bool(payload.get("enabled"), default=True),
+    }
+
+
+def sorted_personal_events(events: list[dict]) -> list[dict]:
+    return sorted(events, key=lambda item: (item["date"], item["end_date"], item["name"].lower()))
+
+
+def load_personal_events() -> list[dict]:
+    path = personal_events_path()
+    if not path.exists():
+        return []
+
+    with path.open("r", encoding="utf-8") as handle:
+        raw_events = json.load(handle)
+
+    if not isinstance(raw_events, list):
+        return []
+
+    events = []
+    seen_ids = set()
+    for event in raw_events:
+        if not isinstance(event, dict):
+            continue
+        try:
+            normalized = validate_personal_event(event, event_id=event.get("id"))
+        except ValueError:
+            continue
+        while normalized["id"] in seen_ids:
+            normalized["id"] = uuid4().hex
+        seen_ids.add(normalized["id"])
+        events.append(normalized)
+    return sorted_personal_events(events)
+
+
+def write_personal_events(events: list[dict]) -> None:
+    path = personal_events_path()
+    tmp_path = path.with_suffix(".tmp")
+    with tmp_path.open("w", encoding="utf-8") as handle:
+        json.dump(sorted_personal_events(events), handle, indent=2, sort_keys=True)
+        handle.write("\n")
+    tmp_path.replace(path)
+
+
+def personal_event_week_span(
+    birthdate: date, total_weeks: int, start_iso: str, end_iso: str
+) -> tuple[int, int] | None:
+    start = datetime.strptime(start_iso, "%Y-%m-%d").date()
+    end = datetime.strptime(end_iso, "%Y-%m-%d").date()
+
+    start_days = (start - birthdate).days
+    end_days = (end - birthdate).days
+
+    # Entirely before birth: no dot on this life's timeline.
+    if end_days < 0:
+        return None
+
+    start_week = max(0, start_days // 7)
+    end_week = end_days // 7
+
+    # Entirely after the projected death date: no dot.
+    if start_week > total_weeks - 1:
+        return None
+
+    end_week = min(total_weeks - 1, end_week)
+    if end_week < start_week:
+        return None
+    return start_week, end_week
+
+
 def clean_text(value: str | None, field_name: str, max_length: int) -> str:
     text = (value or "").strip()
     if not text:
@@ -736,6 +865,7 @@ def calculate_life_stats(
     birthdate_value: str,
     life_expectancy_value: str | int | float,
     events: list[dict] | None = None,
+    personal_events: list[dict] | None = None,
     as_of: date | None = None,
 ) -> dict:
     birthdate = parse_birthdate(birthdate_value)
@@ -762,6 +892,27 @@ def calculate_life_stats(
                 }
             )
 
+    visible_personal_events = []
+    source_personal = personal_events if personal_events is not None else []
+    for event in sorted_personal_events(source_personal):
+        if not event.get("enabled", True):
+            continue
+        span = personal_event_week_span(
+            birthdate, total_weeks, event["date"], event["end_date"]
+        )
+        if span is None:
+            continue
+        start_week, end_week = span
+        start_date = datetime.strptime(event["date"], "%Y-%m-%d").date()
+        visible_personal_events.append(
+            {
+                **event,
+                "week_start": start_week,
+                "week_end": end_week,
+                "age_at_start": round(max(0.0, (start_date - birthdate).days / DAYS_PER_YEAR), 1),
+            }
+        )
+
     return {
         "birthdate": birthdate.isoformat(),
         "life_expectancy": round(life_expectancy, 2),
@@ -774,6 +925,7 @@ def calculate_life_stats(
         "weeks_remaining": weeks_remaining,
         "percent_used": round((weeks_lived / total_weeks) * 100, 1),
         "events": visible_events,
+        "personal_events": visible_personal_events,
     }
 
 
@@ -800,6 +952,7 @@ def calculate():
             settings["birthdate"],
             settings["life_expectancy"],
             events=load_events(),
+            personal_events=load_personal_events(),
         )
         write_settings(settings)
     except ValueError as exc:
@@ -881,6 +1034,89 @@ def delete_event(event_id: str):
     if len(remaining) == len(events):
         return jsonify({"error": "Event not found."}), 404
     write_events(remaining)
+    return jsonify({"deleted": event_id})
+
+
+@app.route("/api/personal-events", methods=["GET"])
+def list_personal_events():
+    return jsonify({"personal_events": load_personal_events()})
+
+
+@app.route("/api/personal-events", methods=["POST"])
+def create_personal_event():
+    payload = request.get_json(silent=True) or {}
+    try:
+        event = validate_personal_event(payload, event_id=uuid4().hex)
+        events = load_personal_events()
+        events.append(event)
+        write_personal_events(events)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(event), 201
+
+
+@app.route("/api/personal-events/import", methods=["POST"])
+def import_personal_events():
+    payload = request.get_json(silent=True) or {}
+    raw_events = payload.get("events")
+    if not isinstance(raw_events, list) or not raw_events:
+        return jsonify({"error": "Import requires at least one event row."}), 400
+
+    imported_events = []
+    for index, raw_event in enumerate(raw_events, start=2):
+        if not isinstance(raw_event, dict):
+            return jsonify({"error": f"Row {index}: event row is invalid."}), 400
+        row_number = raw_event.get("_row", index)
+        try:
+            imported_events.append(validate_personal_event(raw_event, event_id=uuid4().hex))
+        except ValueError as exc:
+            return jsonify({"error": f"Row {row_number}: {exc}"}), 400
+
+    events = load_personal_events()
+    events.extend(imported_events)
+    write_personal_events(events)
+    return jsonify({"imported": len(imported_events), "personal_events": load_personal_events()}), 201
+
+
+@app.route("/api/personal-events/<event_id>", methods=["PUT"])
+def update_personal_event(event_id: str):
+    events = load_personal_events()
+    event_index = next((index for index, event in enumerate(events) if event["id"] == event_id), None)
+    if event_index is None:
+        return jsonify({"error": "Personal event not found."}), 404
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        events[event_index] = validate_personal_event(payload, event_id=event_id)
+        write_personal_events(events)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(events[event_index])
+
+
+@app.route("/api/personal-events/<event_id>/toggle", methods=["POST"])
+def toggle_personal_event(event_id: str):
+    events = load_personal_events()
+    event_index = next((index for index, event in enumerate(events) if event["id"] == event_id), None)
+    if event_index is None:
+        return jsonify({"error": "Personal event not found."}), 404
+
+    payload = request.get_json(silent=True) or {}
+    if "enabled" in payload:
+        events[event_index]["enabled"] = parse_bool(payload.get("enabled"), default=True)
+    else:
+        events[event_index]["enabled"] = not events[event_index].get("enabled", True)
+    write_personal_events(events)
+    return jsonify(events[event_index])
+
+
+@app.route("/api/personal-events/<event_id>", methods=["DELETE"])
+def delete_personal_event(event_id: str):
+    events = load_personal_events()
+    remaining = [event for event in events if event["id"] != event_id]
+    if len(remaining) == len(events):
+        return jsonify({"error": "Personal event not found."}), 404
+    write_personal_events(remaining)
     return jsonify({"deleted": event_id})
 
 
